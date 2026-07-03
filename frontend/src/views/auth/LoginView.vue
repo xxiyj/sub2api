@@ -4,10 +4,10 @@
       <!-- Title -->
       <div class="text-center">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-          {{ t('auth.welcomeBack') }}
+          {{ loginCopy.title }} {{ brandName }}
         </h2>
         <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">
-          {{ t('auth.signInToAccount') }}
+          {{ loginCopy.subtitle }}
         </p>
       </div>
       <!-- Login Form -->
@@ -217,7 +217,7 @@ import type { LoginAgreementDocument, TotpLoginResponse } from '@/types'
 import { extractI18nErrorMessage } from '@/utils/apiError'
 import { clearAllAffiliateReferralCodes } from '@/utils/oauthAffiliate'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
 
 // ==================== Router & Stores ====================
@@ -225,6 +225,21 @@ const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
 const router = useRouter()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+const brandName = computed(() => {
+  const configured = appStore.siteName?.trim()
+  return configured && configured !== 'Sub2API' ? configured : 'Token Life'
+})
+const loginCopy = computed(() => (
+  locale.value === 'zh'
+    ? {
+        title: '登录',
+        subtitle: '进入控制台管理 API Key、余额额度和模型调用'
+      }
+    : {
+        title: 'Sign in to',
+        subtitle: 'Open the console to manage API keys, balance, quotas, and model requests'
+      }
+))
 
 // ==================== State ====================
 

@@ -406,6 +406,22 @@ If the goal is to trigger a release workflow by tag push, the tag name must matc
 
 If the tag does not match these patterns, the corresponding release workflow will not trigger from tag push.
 
+### Custom template version naming
+
+Keep the custom template version aligned with the upstream base version, then append a local template revision suffix.
+
+Recommended format:
+
+- upstream release tag: `v0.1.143`
+- first custom template release: `custom-v0.1.143-1`
+- second custom template release from the same upstream base: `custom-v0.1.143-2`
+
+The custom release workflow strips the `custom-v` prefix, so the application version becomes:
+
+- `custom-v0.1.143-1` -> `0.1.143-1`
+
+Prefer the hyphen suffix form (`-1`, `-2`, etc.) over dot-only suffixes such as `0.1.143.1`, because the hyphen clearly separates the upstream version from this fork's template revision.
+
 ### Practical rule for agents
 
 - ordinary commit/push: expect CI and security workflows to run

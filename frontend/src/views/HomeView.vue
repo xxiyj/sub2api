@@ -1,479 +1,372 @@
 <template>
-  <!-- Custom Home Content: Full Page Mode -->
   <div v-if="homeContent" class="min-h-screen">
-    <!-- iframe mode -->
     <iframe
       v-if="isHomeContentUrl"
       :src="homeContent.trim()"
       class="h-screen w-full border-0"
       allowfullscreen
     ></iframe>
-    <!-- HTML mode - SECURITY: homeContent is admin-only setting, XSS risk is acceptable -->
     <div v-else v-html="homeContent"></div>
   </div>
 
-  <!-- Default Home Page -->
-  <div
-    v-else
-    class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
-  >
-    <!-- Background Decorations -->
-    <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <div
-        class="absolute -right-40 -top-40 h-96 w-96 rounded-full bg-primary-400/20 blur-3xl"
-      ></div>
-      <div
-        class="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-primary-500/15 blur-3xl"
-      ></div>
-      <div
-        class="absolute left-1/3 top-1/4 h-72 w-72 rounded-full bg-primary-300/10 blur-3xl"
-      ></div>
-      <div
-        class="absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-primary-400/10 blur-3xl"
-      ></div>
-      <div
-        class="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"
-      ></div>
-    </div>
+  <div v-else class="tl-home" :class="{ 'tl-home-dark': isDark }">
+    <div class="tl-shell">
+      <nav class="tl-nav">
+        <router-link class="tl-brand" to="/home" aria-label="Token Life">
+          <span class="tl-logo">
+            <img :src="siteLogo || '/logo.png'" alt="Token Life" />
+          </span>
+          <span>{{ siteName }}</span>
+        </router-link>
 
-    <!-- Header -->
-    <header class="relative z-20 px-6 py-4">
-      <nav class="mx-auto flex max-w-6xl items-center justify-between">
-        <!-- Logo -->
-        <div class="flex items-center">
-          <div class="h-10 w-10 overflow-hidden rounded-xl shadow-md">
-            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
+        <div class="tl-actions">
+          <div class="tl-lang" role="group" :aria-label="copy.language">
+            <button
+              type="button"
+              :class="{ active: activeLocale === 'zh' }"
+              @click="switchLanguage('zh')"
+            >
+              中文
+            </button>
+            <button
+              type="button"
+              :class="{ active: activeLocale === 'en' }"
+              @click="switchLanguage('en')"
+            >
+              EN
+            </button>
           </div>
-        </div>
 
-        <!-- Nav Actions -->
-        <div class="flex items-center gap-3">
-          <!-- Language Switcher -->
-          <LocaleSwitcher />
-
-          <!-- Doc Link -->
-          <a
-            v-if="docUrl"
-            :href="docUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
-            :title="t('home.viewDocs')"
-          >
-            <Icon name="book" size="md" />
-          </a>
-
-          <!-- Theme Toggle -->
-          <button
-            @click="toggleTheme"
-            class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
-            :title="isDark ? t('home.switchToLight') : t('home.switchToDark')"
-          >
+          <button class="tl-icon-button" type="button" :title="themeTitle" @click="toggleTheme">
             <Icon v-if="isDark" name="sun" size="md" />
             <Icon v-else name="moon" size="md" />
           </button>
 
-          <!-- Login / Dashboard Button -->
-          <router-link
-            v-if="isAuthenticated"
-            :to="dashboardPath"
-            class="inline-flex items-center gap-1.5 rounded-full bg-gray-900 py-1 pl-1 pr-2.5 transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
-            <span
-              class="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-primary-600 text-[10px] font-semibold text-white"
-            >
-              {{ userInitial }}
-            </span>
-            <span class="text-xs font-medium text-white">{{ t('home.dashboard') }}</span>
-            <svg
-              class="h-3 w-3 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"
-              />
-            </svg>
-          </router-link>
-          <router-link
-            v-else
-            to="/login"
-            class="inline-flex items-center rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
-            {{ t('home.login') }}
+          <router-link class="tl-login" :to="isAuthenticated ? dashboardPath : '/login'">
+            {{ isAuthenticated ? copy.console : copy.login }}
           </router-link>
         </div>
       </nav>
-    </header>
 
-    <!-- Main Content -->
-    <main class="relative z-10 flex-1 px-6 py-16">
-      <div class="mx-auto max-w-6xl">
-        <!-- Hero Section - Left/Right Layout -->
-        <div class="mb-12 flex flex-col items-center justify-between gap-12 lg:flex-row lg:gap-16">
-          <!-- Left: Text Content -->
-          <div class="flex-1 text-center lg:text-left">
-            <h1
-              class="mb-4 text-4xl font-bold text-gray-900 dark:text-white md:text-5xl lg:text-6xl"
-            >
-              {{ siteName }}
+      <main class="tl-hero">
+        <section class="tl-left">
+          <div class="tl-copy">
+            <div class="tl-eyebrow"><i></i><span>API Token Platform</span></div>
+            <h1 class="tl-title">
+              <template v-if="activeLocale === 'zh'">
+                <span>面向生产环境</span>
+                <span><em>AI API</em> 接入平台</span>
+              </template>
+              <template v-else>
+                <span>Unified AI API</span>
+                <span>access for</span>
+                <span><em>production teams.</em></span>
+              </template>
             </h1>
-            <p class="mb-8 text-lg text-gray-600 dark:text-dark-300 md:text-xl">
-              {{ siteSubtitle }}
-            </p>
+            <p class="tl-subtitle">{{ copy.subtitle }}</p>
 
-            <!-- CTA Button -->
-            <div>
-              <router-link
-                :to="isAuthenticated ? dashboardPath : '/login'"
-                class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
-              >
-                {{ isAuthenticated ? t('home.goToDashboard') : t('home.getStarted') }}
-                <Icon name="arrowRight" size="md" class="ml-2" :stroke-width="2" />
+            <div class="tl-cta">
+              <router-link class="tl-primary" :to="isAuthenticated ? dashboardPath : '/login'">
+                <span>{{ isAuthenticated ? copy.openConsole : copy.getStarted }}</span>
+                <Icon name="arrowRight" size="sm" />
               </router-link>
+              <button class="tl-secondary" type="button" @click="showAccessDialog = true">
+                {{ copy.accessNote }}
+              </button>
             </div>
           </div>
+        </section>
 
-          <!-- Right: Terminal Animation -->
-          <div class="flex flex-1 justify-center lg:justify-end">
-            <div class="terminal-container">
-              <div class="terminal-window">
-                <!-- Window header -->
-                <div class="terminal-header">
-                  <div class="terminal-buttons">
-                    <span class="btn-close"></span>
-                    <span class="btn-minimize"></span>
-                    <span class="btn-maximize"></span>
-                  </div>
-                  <span class="terminal-title">terminal</span>
+        <section class="tl-right" aria-label="Gateway workflow">
+          <div class="tl-panel tl-command">
+            <div class="tl-command-head">
+              <div>
+                <b>{{ copy.workflow }}</b>
+                <span>{{ copy.workflowMeta }}</span>
+              </div>
+              <strong>{{ copy.dynamicRouting }}</strong>
+            </div>
+
+            <div class="tl-route">
+              <article v-for="item in workflowItems" :key="item.key" class="tl-route-row">
+                <div class="tl-route-icon" :class="item.className">{{ item.badge }}</div>
+                <div>
+                  <b>{{ item.title }}</b>
+                  <span>{{ item.text }}</span>
                 </div>
-                <!-- Terminal content -->
-                <div class="terminal-body">
-                  <div class="code-line line-1">
-                    <span class="code-prompt">$</span>
-                    <span class="code-cmd">curl</span>
-                    <span class="code-flag">-X POST</span>
-                    <span class="code-url">/v1/messages</span>
-                  </div>
-                  <div class="code-line line-2">
-                    <span class="code-comment"># Routing to upstream...</span>
-                  </div>
-                  <div class="code-line line-3">
-                    <span class="code-success">200 OK</span>
-                    <span class="code-response">{ "content": "Hello!" }</span>
-                  </div>
-                  <div class="code-line line-4">
-                    <span class="code-prompt">$</span>
-                    <span class="cursor"></span>
-                  </div>
-                </div>
+              </article>
+            </div>
+
+            <div class="tl-codebox">
+              <div class="tl-codebar">
+                <span class="tl-dot tl-red"></span>
+                <span class="tl-dot tl-yellow"></span>
+                <span class="tl-dot tl-green"></span>
+              </div>
+              <div class="tl-code">
+                <div><span class="accent">POST</span> /v1/chat/completions</div>
+                <div><span class="muted">policy:</span> route + meter + record</div>
+                <div><span class="ok">200 OK</span> provider=grok latency=812ms</div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
+      </main>
 
-        <!-- Feature Tags - Centered -->
-        <div class="mb-12 flex flex-wrap items-center justify-center gap-4 md:gap-6">
-          <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
-          >
-            <Icon name="swap" size="sm" class="text-primary-500" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
-              t('home.tags.subscriptionToApi')
-            }}</span>
-          </div>
-          <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
-          >
-            <Icon name="shield" size="sm" class="text-primary-500" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
-              t('home.tags.stickySession')
-            }}</span>
-          </div>
-          <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
-          >
-            <Icon name="chart" size="sm" class="text-primary-500" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
-              t('home.tags.realtimeBilling')
-            }}</span>
+      <section class="tl-lower">
+        <div class="tl-stats">
+          <div v-for="item in stats" :key="item.value" class="tl-stat">
+            <strong>{{ item.value }}</strong>
+            <span>{{ item.label }}</span>
           </div>
         </div>
 
-        <!-- Features Grid -->
-        <div class="mb-12 grid gap-6 md:grid-cols-3">
-          <!-- Feature 1: Unified Gateway -->
-          <div
-            class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
-          >
-            <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 transition-transform group-hover:scale-110"
-            >
-              <Icon name="server" size="lg" class="text-white" />
-            </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('home.features.unifiedGateway') }}
-            </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
-              {{ t('home.features.unifiedGatewayDesc') }}
-            </p>
+        <div class="tl-strip">
+          <div class="tl-strip-icon">↗</div>
+          <div>
+            <b>{{ copy.operationsTitle }}</b>
+            <span>{{ copy.operationsText }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="tl-reliability">
+        <div class="tl-reliable-copy">
+          <div>
+            <div class="tl-section-kicker">{{ copy.reliableKicker }}</div>
+            <h2>{{ copy.reliableTitle }}</h2>
+            <p>{{ copy.reliableText }}</p>
           </div>
 
-          <!-- Feature 2: Account Pool -->
-          <div
-            class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
-          >
-            <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg shadow-primary-500/30 transition-transform group-hover:scale-110"
-            >
-              <svg
-                class="h-6 w-6 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
-                />
-              </svg>
+          <div class="tl-service-line">
+            <i>✓</i>
+            <div>
+              <b>{{ copy.statusTitle }}</b>
+              <span>{{ copy.statusText }}</span>
             </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('home.features.multiAccount') }}
-            </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
-              {{ t('home.features.multiAccountDesc') }}
-            </p>
-          </div>
-
-          <!-- Feature 3: Billing & Quota -->
-          <div
-            class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
-          >
-            <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/30 transition-transform group-hover:scale-110"
-            >
-              <svg
-                class="h-6 w-6 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"
-                />
-              </svg>
-            </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('home.features.balanceQuota') }}
-            </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
-              {{ t('home.features.balanceQuotaDesc') }}
-            </p>
           </div>
         </div>
 
-        <!-- Supported Providers -->
-        <div class="mb-8 text-center">
-          <h2 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
-            {{ t('home.providers.title') }}
-          </h2>
-          <p class="text-sm text-gray-600 dark:text-dark-400">
-            {{ t('home.providers.description') }}
-          </p>
+        <div class="tl-reliable-grid">
+          <article v-for="item in reliableItems" :key="item.tag" class="tl-reliable-item">
+            <span class="tl-reliable-tag">{{ item.tag }}</span>
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.text }}</p>
+          </article>
         </div>
+      </section>
 
-        <div class="mb-16 flex flex-wrap items-center justify-center gap-4">
-          <!-- Claude - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-orange-500"
-            >
-              <span class="text-xs font-bold text-white">C</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.claude') }}</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- GPT - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-green-600"
-            >
-              <span class="text-xs font-bold text-white">G</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">GPT</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- Gemini - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600"
-            >
-              <span class="text-xs font-bold text-white">G</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.gemini') }}</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- Antigravity - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-pink-600"
-            >
-              <span class="text-xs font-bold text-white">A</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.antigravity') }}</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- More - Coming Soon -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-gray-200/50 bg-white/40 px-5 py-3 opacity-60 backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/40"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gray-500 to-gray-600"
-            >
-              <span class="text-xs font-bold text-white">+</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.more') }}</span>
-            <span
-              class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-dark-700 dark:text-dark-400"
-              >{{ t('home.providers.soon') }}</span
-            >
-          </div>
-        </div>
+      <footer class="tl-footer">© {{ currentYear }} {{ siteName }} · token-life.com</footer>
+    </div>
+
+    <div v-if="showAccessDialog" class="tl-gate" role="dialog" aria-modal="true">
+      <div class="tl-modal">
+        <div class="tl-modal-mark">!</div>
+        <h2>{{ copy.dialogTitle }}</h2>
+        <p>{{ copy.dialogText }}</p>
+        <button class="tl-confirm" type="button" @click="confirmAccess">{{ copy.dialogConfirm }}</button>
       </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="relative z-10 border-t border-gray-200/50 px-6 py-8 dark:border-dark-800/50">
-      <div
-        class="mx-auto flex max-w-6xl flex-col items-center justify-center gap-4 text-center sm:flex-row sm:text-left"
-      >
-        <p class="text-sm text-gray-500 dark:text-dark-400">
-          &copy; {{ currentYear }} {{ siteName }}. {{ t('home.footer.allRightsReserved') }}
-        </p>
-        <div class="flex items-center gap-4">
-          <a
-            v-if="docUrl"
-            :href="docUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
-          >
-            {{ t('home.docs') }}
-          </a>
-          <a
-            :href="githubUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
-          >
-            GitHub
-          </a>
-        </div>
-      </div>
-    </footer>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
-import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { setLocale } from '@/i18n'
+import { sanitizeUrl } from '@/utils/url'
 
-const { t } = useI18n()
+type LocaleCode = 'zh' | 'en'
 
+const { locale } = useI18n()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
-// Site settings - directly from appStore (already initialized from injected config)
-const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Sub2API')
-const siteLogo = computed(() => appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '')
-const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'AI API Gateway Platform')
-const docUrl = computed(() => appStore.cachedPublicSettings?.doc_url || appStore.docUrl || '')
+const siteName = computed(() => {
+  const configured = appStore.cachedPublicSettings?.site_name || appStore.siteName
+  return configured && !['Sub2API', 'QuotaAPI'].includes(configured) ? configured : 'Token Life'
+})
+const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
-
-// Check if homeContent is a URL (for iframe display)
 const isHomeContentUrl = computed(() => {
   const content = homeContent.value.trim()
   return content.startsWith('http://') || content.startsWith('https://')
 })
 
-// Theme
 const isDark = ref(document.documentElement.classList.contains('dark'))
-
-// GitHub URL
-const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
-
-// Auth state
-const isAuthenticated = computed(() => authStore.isAuthenticated)
-const isAdmin = computed(() => authStore.isAdmin)
-const dashboardPath = computed(() => isAdmin.value ? '/admin/dashboard' : '/dashboard')
-const userInitial = computed(() => {
-  const user = authStore.user
-  if (!user || !user.email) return ''
-  return user.email.charAt(0).toUpperCase()
-})
-
-// Current year for footer
+const showAccessDialog = ref(false)
 const currentYear = computed(() => new Date().getFullYear())
 
-// Toggle theme
-function toggleTheme() {
+const isAuthenticated = computed(() => authStore.isAuthenticated)
+const isAdmin = computed(() => authStore.isAdmin)
+const dashboardPath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))
+
+const copyMap = {
+  zh: {
+    language: '语言切换',
+    login: '登录',
+    console: '控制台',
+    openConsole: '进入控制台',
+    getStarted: '开始使用',
+    themeDark: '切换为深色',
+    themeLight: '切换为浅色',
+    subtitle: 'Token Life 提供统一的 AI API 网关，集中管理接入、账号池、调用记录与额度策略。',
+    accessNote: '仅向非中国大陆地区用户开放',
+    workflow: '网关工作流',
+    workflowMeta: '统一接口 · 智能路由 · 请求留痕',
+    dynamicRouting: '动态路由',
+    clientRequest: '客户端请求',
+    clientRequestText: '兼容 OpenAI 协议的请求进入 Token Life 网关。',
+    accountRouting: '账号路由',
+    accountRoutingText: '系统根据状态与容量策略，选择可用的上游服务账号。',
+    trackedResponse: '响应留痕',
+    trackedResponseText: '返回响应的同时，记录请求、用量与计费相关数据。',
+    unifiedEndpoint: '统一接入端点',
+    centralControl: '集中密钥管理',
+    traceableRecords: '调用记录可追踪',
+    operationsTitle: '面向真实 AI API 运营场景',
+    operationsText: '将路由、余额、账号与请求记录集中到一个运维控制台中。',
+    reliableKicker: '稳定可靠的 API 服务',
+    reliableTitle: '为长期稳定的 API 调用而设计',
+    reliableText: 'Token Life 以运营稳定性为核心，提供稳定路由、透明的用量记录、可管理的账号池，以及适合日常 AI 工作负载的可预期访问能力。',
+    statusTitle: '状态清晰，降低运维不确定性',
+    statusText: '集中展示访问状态、额度与请求活动，降低排查与运维成本。',
+    routingTitle: '稳定的请求路由',
+    routingText: '请求统一进入网关，由平台按配置转发，减少客户端侧的重复切换与改造。',
+    quotaTitle: '透明的用量控制',
+    quotaText: '集中查看 API 用量、余额与访问限制，让成本和额度更加透明。',
+    keysTitle: '集中式密钥管理',
+    keysText: '在统一控制台中管理账号与 API Key，避免分散在本地配置文件中。',
+    logsTitle: '可追踪的调用记录',
+    logsText: '保留完整请求记录，便于审计、用量核对与日常团队运营。',
+    dialogTitle: '访问提示',
+    dialogText: '本服务仅向非中国大陆地区用户开放。继续进入即表示你确认当前并非自中国大陆地区访问，并同意遵守所在地法律法规及平台规则。',
+    dialogConfirm: '我确认并进入'
+  },
+  en: {
+    language: 'Language switcher',
+    login: 'Login',
+    console: 'Console',
+    openConsole: 'Open Console',
+    getStarted: 'Get Started',
+    themeDark: 'Switch to dark',
+    themeLight: 'Switch to light',
+    subtitle: 'Token Life provides a unified gateway for API access, account pools, usage visibility, and quota governance across modern AI providers.',
+    accessNote: 'Available outside mainland China only',
+    workflow: 'Gateway Workflow',
+    workflowMeta: 'Unified endpoint · Smart routing · Traceable requests',
+    dynamicRouting: 'Dynamic routing',
+    clientRequest: 'Client request',
+    clientRequestText: 'An OpenAI-compatible request enters the Token Life gateway.',
+    accountRouting: 'Account routing',
+    accountRoutingText: 'Routing policies select an available upstream account by status and capacity.',
+    trackedResponse: 'Tracked response',
+    trackedResponseText: 'The response is returned together with request, usage, and billing records.',
+    unifiedEndpoint: 'Unified endpoint',
+    centralControl: 'Central control',
+    traceableRecords: 'Traceable records',
+    operationsTitle: 'Built for real AI API operations',
+    operationsText: 'Keep routing, balance, accounts, and request records in one operational console.',
+    reliableKicker: 'Stable API Service',
+    reliableTitle: 'Designed for stable, long-term API delivery.',
+    reliableText: 'Token Life is built for operational reliability: stable routing, transparent usage records, manageable account pools, and predictable access for day-to-day AI workloads.',
+    statusTitle: 'Clear status, lower operational risk',
+    statusText: 'Keep access status, quotas, and request activity visible in one place.',
+    routingTitle: 'Reliable request routing',
+    routingText: 'Route requests through configured providers and reduce repeated switching in client applications.',
+    quotaTitle: 'Visible usage control',
+    quotaText: 'Track API usage, balance, and access limits through a clearer operational view.',
+    keysTitle: 'Centralized key management',
+    keysText: 'Manage accounts and API keys from one console instead of scattered local configuration files.',
+    logsTitle: 'Traceable API records',
+    logsText: 'Keep request records available for auditing, reconciliation, and day-to-day team operations.',
+    dialogTitle: 'Access notice',
+    dialogText: 'This service is available only to users outside mainland China. Continuing means you confirm that you are not accessing from mainland China and agree to follow local laws and platform rules.',
+    dialogConfirm: 'Confirm and enter'
+  }
+} as const
+
+const activeLocale = computed<LocaleCode>(() => (locale.value === 'zh' ? 'zh' : 'en'))
+const copy = computed(() => copyMap[activeLocale.value])
+const themeTitle = computed(() => (isDark.value ? copy.value.themeLight : copy.value.themeDark))
+
+const workflowItems = computed(() => [
+  {
+    key: 'in',
+    badge: 'IN',
+    className: 'tl-r1',
+    title: copy.value.clientRequest,
+    text: copy.value.clientRequestText
+  },
+  {
+    key: 'rt',
+    badge: 'RT',
+    className: 'tl-r2',
+    title: copy.value.accountRouting,
+    text: copy.value.accountRoutingText
+  },
+  {
+    key: 'out',
+    badge: 'OUT',
+    className: 'tl-r3',
+    title: copy.value.trackedResponse,
+    text: copy.value.trackedResponseText
+  }
+])
+
+const stats = computed(() => [
+  { value: 'API', label: copy.value.unifiedEndpoint },
+  { value: 'Keys', label: copy.value.centralControl },
+  { value: 'Logs', label: copy.value.traceableRecords }
+])
+
+const reliableItems = computed(() => [
+  { tag: 'Routing', title: copy.value.routingTitle, text: copy.value.routingText },
+  { tag: 'Quota', title: copy.value.quotaTitle, text: copy.value.quotaText },
+  { tag: 'Keys', title: copy.value.keysTitle, text: copy.value.keysText },
+  { tag: 'Logs', title: copy.value.logsTitle, text: copy.value.logsText }
+])
+
+async function switchLanguage(nextLocale: LocaleCode): Promise<void> {
+  if (nextLocale === activeLocale.value) {
+    return
+  }
+
+  await setLocale(nextLocale)
+}
+
+function toggleTheme(): void {
   isDark.value = !isDark.value
   document.documentElement.classList.toggle('dark', isDark.value)
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
 }
 
-// Initialize theme
-function initTheme() {
+function initTheme(): void {
   const savedTheme = localStorage.getItem('theme')
-  if (
-    savedTheme === 'dark' ||
-    (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  ) {
+  if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     isDark.value = true
     document.documentElement.classList.add('dark')
+  } else {
+    isDark.value = false
+    document.documentElement.classList.remove('dark')
   }
+}
+
+function confirmAccess(): void {
+  showAccessDialog.value = false
+  localStorage.setItem('token_life_access_confirmed', '1')
 }
 
 onMounted(() => {
   initTheme()
-
-  // Check auth state
   authStore.checkAuth()
 
-  // Ensure public settings are loaded (will use cache if already loaded from injected config)
+  if (!localStorage.getItem('token_life_access_confirmed')) {
+    showAccessDialog.value = true
+  }
+
   if (!appStore.publicSettingsLoaded) {
     appStore.fetchPublicSettings()
   }
@@ -481,164 +374,816 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Terminal Container */
-.terminal-container {
+.tl-home {
   position: relative;
-  display: inline-block;
-}
-
-/* Terminal Window */
-.terminal-window {
-  width: 420px;
-  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-  border-radius: 14px;
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  min-height: 100vh;
   overflow: hidden;
-  transform: perspective(1000px) rotateX(2deg) rotateY(-2deg);
-  transition: transform 0.3s ease;
+  background:
+    radial-gradient(circle at 4% 0%, rgba(147, 197, 253, 0.34), transparent 28%),
+    radial-gradient(circle at 82% 92%, rgba(199, 210, 254, 0.42), transparent 30%),
+    linear-gradient(135deg, #eef5ff 0%, #f8fbff 48%, #edf4ff 100%);
+  color: #0f172a;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
 }
 
-.terminal-window:hover {
-  transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(-4px);
+.tl-home::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(rgba(74, 105, 149, 0.085) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 105, 149, 0.085) 1px, transparent 1px),
+    linear-gradient(rgba(74, 105, 149, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 105, 149, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px, 42px 42px, 168px 168px, 168px 168px;
+  pointer-events: none;
 }
 
-/* Terminal Header */
-.terminal-header {
+.tl-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100vh;
+  width: min(1160px, calc(100% - 44px));
+  margin: 0 auto;
+  padding: 26px 0 34px;
+  flex-direction: column;
+}
+
+.tl-nav,
+.tl-actions,
+.tl-brand,
+.tl-login,
+.tl-primary,
+.tl-secondary,
+.tl-icon-button,
+.tl-lang,
+.tl-command-head,
+.tl-cta {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  background: rgba(30, 41, 59, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.terminal-buttons {
-  display: flex;
-  gap: 8px;
+.tl-nav {
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 48px;
 }
 
-.terminal-buttons span {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+.tl-brand {
+  gap: 12px;
+  color: #0f172a;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 800;
 }
 
-.btn-close {
-  background: #ef4444;
-}
-.btn-minimize {
-  background: #eab308;
-}
-.btn-maximize {
-  background: #22c55e;
+.tl-logo {
+  display: block;
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #071226;
+  box-shadow: 0 12px 24px rgba(47, 102, 208, 0.2);
 }
 
-.terminal-title {
-  flex: 1;
-  text-align: center;
-  font-size: 12px;
-  font-family: ui-monospace, monospace;
+.tl-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tl-actions {
+  gap: 12px;
+}
+
+.tl-lang {
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(111, 140, 181, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 8px 24px rgba(52, 80, 122, 0.08);
+}
+
+.tl-lang button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
   color: #64748b;
-  margin-right: 52px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0;
+  padding: 7px 11px;
 }
 
-/* Terminal Body */
-.terminal-body {
-  padding: 20px 24px;
-  font-family: ui-monospace, 'Fira Code', monospace;
+.tl-lang button.active {
+  background: #0f172a;
+  color: #fff;
+}
+
+.tl-icon-button {
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(111, 140, 181, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #64748b;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(52, 80, 122, 0.08);
+}
+
+.tl-login {
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 17px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #fff;
   font-size: 14px;
-  line-height: 2;
+  font-weight: 750;
+  text-decoration: none;
 }
 
-.code-line {
+.tl-hero {
+  display: grid;
+  grid-template-columns: 0.88fr 1.12fr;
+  gap: 48px;
+  align-items: start;
+  padding: 58px 0 24px;
+}
+
+.tl-left {
   display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tl-copy {
+  padding-top: 24px;
+}
+
+.tl-eyebrow {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.8);
+  color: #2f66d0;
+  font-size: 13px;
+  font-weight: 750;
+  padding: 9px 13px;
+}
+
+.tl-eyebrow i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #2f66d0;
+}
+
+.tl-title {
+  display: grid;
+  gap: 0.08em;
+  max-width: 610px;
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(38px, 4.7vw, 64px);
+  font-weight: 820;
+  letter-spacing: 0;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.tl-title em {
+  color: #2f66d0;
+  font-style: normal;
+}
+
+.tl-subtitle {
+  max-width: 560px;
+  margin: 24px 0 0;
+  color: #526172;
+  font-size: clamp(17px, 1.5vw, 20px);
+  font-weight: 430;
+  line-height: 1.74;
+}
+
+.tl-cta {
   flex-wrap: wrap;
-  opacity: 0;
-  animation: line-appear 0.5s ease forwards;
+  gap: 13px;
+  margin-top: 34px;
 }
 
-.line-1 {
-  animation-delay: 0.3s;
-}
-.line-2 {
-  animation-delay: 1s;
-}
-.line-3 {
-  animation-delay: 1.8s;
-}
-.line-4 {
-  animation-delay: 2.5s;
+.tl-primary,
+.tl-secondary {
+  min-height: 52px;
+  border: 0;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 760;
+  text-decoration: none;
 }
 
-@keyframes line-appear {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.tl-primary {
+  justify-content: center;
+  gap: 10px;
+  padding: 0 24px;
+  background: #2f66d0;
+  color: #fff;
+  box-shadow: 0 18px 36px rgba(47, 102, 208, 0.24);
 }
 
-.code-prompt {
-  color: #22c55e;
-  font-weight: bold;
-}
-.code-cmd {
-  color: #38bdf8;
-}
-.code-flag {
-  color: #a78bfa;
-}
-.code-url {
-  color: #14b8a6;
-}
-.code-comment {
+.tl-secondary {
+  justify-content: center;
+  background: transparent;
   color: #64748b;
-  font-style: italic;
-}
-.code-success {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.15);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-.code-response {
-  color: #fbbf24;
+  cursor: pointer;
+  padding: 0;
 }
 
-/* Blinking Cursor */
-.cursor {
-  display: inline-block;
-  width: 8px;
-  height: 16px;
-  background: #22c55e;
-  animation: blink 1s step-end infinite;
+.tl-right {
+  display: grid;
+  width: 100%;
+  max-width: 560px;
+  justify-self: end;
 }
 
-@keyframes blink {
-  0%,
-  50% {
-    opacity: 1;
+.tl-panel,
+.tl-stats,
+.tl-strip,
+.tl-reliable-copy,
+.tl-reliable-grid,
+.tl-modal {
+  border: 1px solid rgba(111, 140, 181, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 22px 60px rgba(52, 80, 122, 0.1);
+  backdrop-filter: blur(14px);
+}
+
+.tl-panel {
+  border-radius: 28px;
+}
+
+.tl-command {
+  padding: 22px;
+  overflow: hidden;
+}
+
+.tl-command-head {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.tl-command-head b,
+.tl-command-head span {
+  display: block;
+}
+
+.tl-command-head b {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 780;
+}
+
+.tl-command-head span {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.tl-command-head strong,
+.tl-reliable-tag {
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.84);
+  color: #2f66d0;
+  font-size: 12px;
+  font-weight: 760;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.tl-route {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 13px;
+}
+
+.tl-route-row {
+  display: grid;
+  gap: 13px;
+  border: 1px solid rgba(111, 140, 181, 0.13);
+  border-radius: 18px;
+  background: rgba(248, 251, 255, 0.82);
+  padding: 16px;
+}
+
+.tl-route-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.tl-r1 { background: #2f66d0; }
+.tl-r2 { background: #14b8a6; }
+.tl-r3 { background: #f97316; }
+
+.tl-route-row b {
+  display: block;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 780;
+  line-height: 1.35;
+}
+
+.tl-route-row span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.48;
+}
+
+.tl-codebox {
+  margin-top: 24px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #0f172a;
+}
+
+.tl-codebar {
+  display: flex;
+  height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  background: #1e293b;
+}
+
+.tl-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.tl-red { background: #ef4444; }
+.tl-yellow { background: #eab308; }
+.tl-green { background: #22c55e; }
+
+.tl-code {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 18px;
+  padding: 18px;
+  color: #dbeafe;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.85;
+  word-break: break-word;
+}
+
+.tl-code div:last-child {
+  grid-column: 1 / -1;
+}
+
+.tl-code .accent { color: #60a5fa; }
+.tl-code .ok { color: #5eead4; }
+.tl-code .muted { color: #94a3b8; }
+
+.tl-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.58fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 8px 0 42px;
+}
+
+.tl-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+.tl-stat {
+  padding: 26px 24px;
+  border-right: 1px solid rgba(111, 140, 181, 0.16);
+}
+
+.tl-stat:last-child {
+  border-right: 0;
+}
+
+.tl-stat strong {
+  display: block;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 820;
+  line-height: 1.12;
+}
+
+.tl-stat span,
+.tl-strip span,
+.tl-reliable-copy p,
+.tl-reliable-item p,
+.tl-service-line span {
+  color: #64748b;
+}
+
+.tl-stat span {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.tl-strip {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  border-radius: 24px;
+  padding: 18px;
+}
+
+.tl-strip-icon,
+.tl-service-line i {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 780;
+}
+
+.tl-strip-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: #14b8a6;
+  font-size: 18px;
+}
+
+.tl-strip b,
+.tl-service-line b,
+.tl-reliable-item strong {
+  display: block;
+  color: #0f172a;
+  font-weight: 780;
+  line-height: 1.35;
+}
+
+.tl-strip b,
+.tl-service-line b {
+  font-size: 15px;
+}
+
+.tl-strip span,
+.tl-service-line span {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tl-reliability {
+  display: grid;
+  grid-template-columns: 0.78fr 1.22fr;
+  gap: 20px;
+  align-items: stretch;
+  padding: 0 0 42px;
+}
+
+.tl-reliable-copy,
+.tl-reliable-grid {
+  border-radius: 28px;
+}
+
+.tl-reliable-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 28px;
+}
+
+.tl-section-kicker {
+  margin-bottom: 12px;
+  color: #2f66d0;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tl-reliable-copy h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(26px, 2.65vw, 40px);
+  font-weight: 820;
+  letter-spacing: 0;
+  line-height: 1.12;
+}
+
+.tl-reliable-copy p {
+  margin: 16px 0 0;
+  font-size: 15px;
+  line-height: 1.76;
+}
+
+.tl-service-line {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding-top: 18px;
+  border-top: 1px solid rgba(111, 140, 181, 0.15);
+}
+
+.tl-service-line i {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: #2f66d0;
+  font-style: normal;
+}
+
+.tl-reliable-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding: 18px;
+}
+
+.tl-reliable-item {
+  min-height: 142px;
+  border: 1px solid rgba(111, 140, 181, 0.13);
+  border-radius: 20px;
+  background: rgba(248, 251, 255, 0.82);
+  padding: 20px;
+}
+
+.tl-reliable-item strong {
+  font-size: 17px;
+}
+
+.tl-reliable-item p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.68;
+}
+
+.tl-reliable-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.tl-footer {
+  margin-top: auto;
+  padding: 24px 0 0;
+  color: #7d8ca1;
+  text-align: center;
+  font-size: 13px;
+}
+
+.tl-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.32);
+  padding: 24px;
+  backdrop-filter: blur(12px);
+}
+
+.tl-modal {
+  width: min(420px, 100%);
+  border-radius: 24px;
+  padding: 28px;
+  text-align: center;
+}
+
+.tl-modal-mark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 18px;
+  place-items: center;
+  border-radius: 16px;
+  background: #2f66d0;
+  color: #fff;
+  font-weight: 820;
+}
+
+.tl-modal h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 820;
+}
+
+.tl-modal p {
+  margin: 14px 0 22px;
+  color: #526172;
+  font-size: 14px;
+  line-height: 1.72;
+}
+
+.tl-confirm {
+  min-height: 44px;
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  background: #2f66d0;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.tl-home-dark {
+  background:
+    radial-gradient(circle at 10% 8%, rgba(34, 211, 238, 0.2), transparent 28%),
+    radial-gradient(circle at 84% 86%, rgba(59, 130, 246, 0.18), transparent 30%),
+    linear-gradient(135deg, #020617 0%, #0f172a 48%, #111827 100%);
+  color: #f8fbff;
+}
+
+.tl-home-dark::before {
+  background:
+    linear-gradient(rgba(125, 211, 252, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.1) 1px, transparent 1px),
+    linear-gradient(rgba(125, 211, 252, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px, 42px 42px, 168px 168px, 168px 168px;
+}
+
+.tl-home-dark .tl-brand,
+.tl-home-dark .tl-title,
+.tl-home-dark .tl-command-head b,
+.tl-home-dark .tl-route-row b,
+.tl-home-dark .tl-stat strong,
+.tl-home-dark .tl-strip b,
+.tl-home-dark .tl-reliable-copy h2,
+.tl-home-dark .tl-reliable-item strong,
+.tl-home-dark .tl-service-line b,
+.tl-home-dark .tl-modal h2 {
+  color: #f8fbff;
+}
+
+.tl-home-dark .tl-title em,
+.tl-home-dark .tl-eyebrow,
+.tl-home-dark .tl-section-kicker,
+.tl-home-dark .tl-command-head strong,
+.tl-home-dark .tl-reliable-tag {
+  color: #67e8f9;
+}
+
+.tl-home-dark .tl-subtitle,
+.tl-home-dark .tl-secondary,
+.tl-home-dark .tl-command-head span,
+.tl-home-dark .tl-route-row span,
+.tl-home-dark .tl-stat span,
+.tl-home-dark .tl-strip span,
+.tl-home-dark .tl-reliable-copy p,
+.tl-home-dark .tl-reliable-item p,
+.tl-home-dark .tl-service-line span,
+.tl-home-dark .tl-footer,
+.tl-home-dark .tl-modal p {
+  color: #a8b5c7;
+}
+
+.tl-home-dark .tl-lang,
+.tl-home-dark .tl-icon-button,
+.tl-home-dark .tl-panel,
+.tl-home-dark .tl-stats,
+.tl-home-dark .tl-strip,
+.tl-home-dark .tl-reliable-copy,
+.tl-home-dark .tl-reliable-grid,
+.tl-home-dark .tl-modal {
+  border-color: rgba(125, 211, 252, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.tl-home-dark .tl-route-row,
+.tl-home-dark .tl-reliable-item {
+  border-color: rgba(148, 163, 184, 0.13);
+  background: rgba(15, 23, 42, 0.66);
+}
+
+.tl-home-dark .tl-lang button,
+.tl-home-dark .tl-icon-button {
+  color: #a8b5c7;
+}
+
+.tl-home-dark .tl-lang button.active,
+.tl-home-dark .tl-primary,
+.tl-home-dark .tl-login,
+.tl-home-dark .tl-confirm {
+  background: linear-gradient(135deg, #67e8f9, #22c55e);
+  color: #04111f;
+}
+
+.tl-home-dark .tl-eyebrow,
+.tl-home-dark .tl-command-head strong,
+.tl-home-dark .tl-reliable-tag {
+  border-color: rgba(103, 232, 249, 0.28);
+  background: rgba(8, 47, 73, 0.62);
+}
+
+.tl-home-dark .tl-eyebrow i {
+  background: #22d3ee;
+}
+
+.tl-home-dark .tl-r1,
+.tl-home-dark .tl-strip-icon {
+  background: linear-gradient(135deg, #06b6d4, #0f766e);
+}
+
+.tl-home-dark .tl-r2,
+.tl-home-dark .tl-service-line i,
+.tl-home-dark .tl-modal-mark {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+}
+
+.tl-home-dark .tl-r3 {
+  background: linear-gradient(135deg, #f97316, #be123c);
+}
+
+.tl-home-dark .tl-gate {
+  background: rgba(2, 6, 23, 0.72);
+}
+
+@media (max-width: 980px) {
+  .tl-hero,
+  .tl-lower,
+  .tl-reliability {
+    grid-template-columns: 1fr;
   }
-  51%,
-  100% {
-    opacity: 0;
+
+  .tl-right {
+    max-width: none;
+    justify-self: stretch;
   }
 }
 
-/* Dark mode adjustments */
-:deep(.dark) .terminal-window {
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(20, 184, 166, 0.2),
-    0 0 40px rgba(20, 184, 166, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+@media (max-width: 720px) {
+  .tl-shell {
+    width: min(100% - 28px, 1160px);
+    padding-top: 18px;
+  }
+
+  .tl-nav {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tl-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .tl-login {
+    margin-left: auto;
+  }
+
+  .tl-hero {
+    padding-top: 34px;
+  }
+
+  .tl-title {
+    font-size: clamp(34px, 11vw, 46px);
+  }
+
+  .tl-route,
+  .tl-stats,
+  .tl-reliable-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tl-stat {
+    border-right: 0;
+    border-bottom: 1px solid rgba(111, 140, 181, 0.16);
+  }
+
+  .tl-stat:last-child {
+    border-bottom: 0;
+  }
+
+  .tl-code {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

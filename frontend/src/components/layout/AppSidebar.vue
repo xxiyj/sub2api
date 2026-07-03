@@ -242,7 +242,10 @@ const isDark = ref(document.documentElement.classList.contains('dark'))
 const expandedGroups = ref<Set<string>>(new Set())
 
 // Site settings from appStore (cached, no flicker)
-const siteName = computed(() => appStore.siteName)
+const siteName = computed(() => {
+  const configured = appStore.siteName?.trim()
+  return configured && configured !== 'Sub2API' ? configured : 'Token Life'
+})
 const siteLogo = computed(() => appStore.siteLogo)
 const siteVersion = computed(() => appStore.siteVersion)
 const settingsLoaded = computed(() => appStore.publicSettingsLoaded)

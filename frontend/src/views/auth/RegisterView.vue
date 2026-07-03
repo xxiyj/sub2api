@@ -4,10 +4,10 @@
       <!-- Title -->
       <div class="text-center">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-          {{ t('auth.createAccount') }}
+          {{ registerCopy.titlePrefix }} {{ displaySiteName }} {{ registerCopy.titleSuffix }}
         </h2>
         <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">
-          {{ t('auth.signUpToStart', { siteName }) }}
+          {{ registerCopy.subtitlePrefix }} {{ displaySiteName }} {{ registerCopy.subtitleSuffix }}
         </p>
       </div>
 
@@ -353,7 +353,26 @@ const promoCodeEnabled = ref<boolean>(true)
 const invitationCodeEnabled = ref<boolean>(false)
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
-const siteName = ref<string>('Sub2API')
+const siteName = ref<string>('Token Life')
+const displaySiteName = computed(() => {
+  const configured = siteName.value?.trim()
+  return configured && configured !== 'Sub2API' ? configured : 'Token Life'
+})
+const registerCopy = computed(() => (
+  locale.value === 'zh'
+    ? {
+        titlePrefix: '创建',
+        titleSuffix: '账户',
+        subtitlePrefix: '注册后获取统一 API Key，开始通过',
+        subtitleSuffix: '接入主流 AI 模型'
+      }
+    : {
+        titlePrefix: 'Create your',
+        titleSuffix: 'account',
+        subtitlePrefix: 'Register to get a unified API key and start using',
+        subtitleSuffix: 'for leading AI models'
+      }
+))
 const linuxdoOAuthEnabled = ref<boolean>(false)
 const wechatOAuthEnabled = ref<boolean>(false)
 const oidcOAuthEnabled = ref<boolean>(false)
@@ -461,7 +480,7 @@ onMounted(async () => {
     invitationCodeEnabled.value = settings.invitation_code_enabled
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
-    siteName.value = settings.site_name || 'Sub2API'
+    siteName.value = settings.site_name || 'Token Life'
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
     wechatOAuthEnabled.value = isWeChatWebOAuthEnabled(settings)
     oidcOAuthEnabled.value = settings.oidc_oauth_enabled
@@ -893,7 +912,7 @@ async function handleRegister(): Promise<void> {
     clearAffiliateReferralCode()
 
     // Show success toast
-    appStore.showSuccess(t('auth.accountCreatedSuccess', { siteName: siteName.value }))
+    appStore.showSuccess(t('auth.accountCreatedSuccess', { siteName: displaySiteName.value }))
 
     // Redirect to dashboard
     await router.push('/dashboard')
