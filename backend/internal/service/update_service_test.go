@@ -28,11 +28,19 @@ func (s *updateServiceCacheStub) SetUpdateInfo(_ context.Context, data string, _
 }
 
 type updateServiceGitHubClientStub struct {
-	release *GitHubRelease
+	release  *GitHubRelease
+	releases []GitHubRelease
 }
 
 func (s *updateServiceGitHubClientStub) FetchLatestRelease(context.Context, string) (*GitHubRelease, error) {
 	return s.release, nil
+}
+
+func (s *updateServiceGitHubClientStub) FetchReleases(context.Context, string, int) ([]GitHubRelease, error) {
+	if s.releases != nil {
+		return s.releases, nil
+	}
+	return []GitHubRelease{*s.release}, nil
 }
 
 func (s *updateServiceGitHubClientStub) DownloadFile(context.Context, string, string, int64) error {
@@ -48,11 +56,11 @@ func TestUpdateServicePerformUpdateNoUpdateReturnsSentinel(t *testing.T) {
 		&updateServiceCacheStub{},
 		&updateServiceGitHubClientStub{
 			release: &GitHubRelease{
-				TagName: "v0.1.132",
-				Name:    "v0.1.132",
+				TagName: "custom-v0.1.132-1",
+				Name:    "custom-v0.1.132-1",
 			},
 		},
-		"0.1.132",
+		"0.1.132-1",
 		"release",
 	)
 
@@ -63,7 +71,36 @@ func TestUpdateServicePerformUpdateNoUpdateReturnsSentinel(t *testing.T) {
 	require.ErrorIs(t, err, ErrNoUpdateAvailable)
 }
 
-func TestCompareVersionsIgnoresTemplateRevisionSuffix(t *testing.T) {
-	require.Equal(t, 0, compareVersions("0.1.143-2", "0.1.143"))
-	require.Equal(t, 0, compareVersions("v0.1.143-2", "v0.1.143"))
+func TestCompareVersionsSupportsCustomTemplateRevisions(t *testing.T) {
+	require.Equal(t, 0, compareVersions("0.1.143-2", "custom-v0.1.143-2"))
+	require.Equal(t, -1, compareVersions("0.1.143-2", "0.1.143-3"))
+	require.Equal(t, 1, compareVersions("0.1.143-2", "0.1.143"))
+	require.Equal(t, 1, compareVersions("0.1.144-1", "0.1.143-9"))
+}
+
+func TestFetchLatestReleaseUsesCustomReleaseTagsOnly(t *testing.T) {
+	svc := NewUpdateService(
+		&updateServiceCacheStub{},
+		&updateServiceGitHubClientStub{
+			releases: []GitHubRelease{
+				{TagName: "v0.1.200", Name: "official release"},
+				{TagName: "custom-v0.1.143-3", Name: "custom release"},
+			},
+		},
+		"0.1.143-2",
+		"release",
+	)
+
+	info, err := svc.CheckUpdate(context.Background(), true)
+
+	require.NoError(t, err)
+	require.Equal(t, "0.1.143-3", info.LatestVersion)
+	require.True(t, info.HasUpdate)
+	require.Equal(t, "custom release", info.ReleaseInfo.Name)
+}
+
+func TestMatchingUpdateAssetSupportsCustomBinaryNames(t *testing.T) {
+	require.True(t, isMatchingUpdateAsset("sub2api-linux-amd64", []string{"sub2api-linux-amd64", "linux_amd64"}))
+	require.True(t, isMatchingUpdateAsset("sub2api_linux_amd64.tar.gz", []string{"sub2api-linux-amd64", "linux_amd64"}))
+	require.False(t, isMatchingUpdateAsset("checksums.txt", []string{"sub2api-linux-amd64", "linux_amd64"}))
 }

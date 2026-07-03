@@ -28,7 +28,9 @@ var (
 const (
 	updateCacheKey = "update_check_cache"
 	updateCacheTTL = 1200 // 20 minutes
-	githubRepo     = "Wei-Shaw/sub2api"
+	githubRepo     = "xxiyj/sub2api"
+
+	customReleaseTagPrefix = "custom-v"
 
 	// Security: allowed download domains for updates
 	allowedDownloadHost = "github.com"
@@ -47,6 +49,7 @@ type UpdateCache interface {
 // GitHubReleaseClient 获取 GitHub release 信息的接口
 type GitHubReleaseClient interface {
 	FetchLatestRelease(ctx context.Context, repo string) (*GitHubRelease, error)
+	FetchReleases(ctx context.Context, repo string, perPage int) ([]GitHubRelease, error)
 	DownloadFile(ctx context.Context, url, dest string, maxSize int64) error
 	FetchChecksumFile(ctx context.Context, url string) ([]byte, error)
 }
@@ -103,6 +106,8 @@ type GitHubRelease struct {
 	Body        string        `json:"body"`
 	PublishedAt string        `json:"published_at"`
 	HTMLURL     string        `json:"html_url"`
+	Draft       bool          `json:"draft"`
+	Prerelease  bool          `json:"prerelease"`
 	Assets      []GitHubAsset `json:"assets"`
 }
 
@@ -156,12 +161,14 @@ func (s *UpdateService) PerformUpdate(ctx context.Context) error {
 	}
 
 	// Find matching archive and checksum for current platform
-	archiveName := s.getArchiveName()
+	archiveNames := s.getArchiveNames()
+	var assetName string
 	var downloadURL string
 	var checksumURL string
 
 	for _, asset := range info.ReleaseInfo.Assets {
-		if strings.Contains(asset.Name, archiveName) && !strings.HasSuffix(asset.Name, ".txt") {
+		if isMatchingUpdateAsset(asset.Name, archiveNames) {
+			assetName = asset.Name
 			downloadURL = asset.DownloadURL
 		}
 		if asset.Name == "checksums.txt" {
@@ -204,7 +211,7 @@ func (s *UpdateService) PerformUpdate(ctx context.Context) error {
 	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	// Download archive
-	archivePath := filepath.Join(tempDir, filepath.Base(downloadURL))
+	archivePath := filepath.Join(tempDir, filepath.Base(assetName))
 	if err := s.downloadFile(ctx, downloadURL, archivePath); err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
@@ -280,12 +287,12 @@ func (s *UpdateService) Rollback() error {
 }
 
 func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, error) {
-	release, err := s.githubClient.FetchLatestRelease(ctx, githubRepo)
+	release, err := s.fetchLatestCustomRelease(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	latestVersion := strings.TrimPrefix(release.TagName, "v")
+	latestVersion := normalizeReleaseVersion(release.TagName)
 
 	assets := make([]Asset, len(release.Assets))
 	for i, a := range release.Assets {
@@ -312,14 +319,65 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 	}, nil
 }
 
+func (s *UpdateService) fetchLatestCustomRelease(ctx context.Context) (*GitHubRelease, error) {
+	releases, err := s.githubClient.FetchReleases(ctx, getUpdateGitHubRepo(), 30)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range releases {
+		release := releases[i]
+		if release.Draft || !strings.HasPrefix(release.TagName, customReleaseTagPrefix) {
+			continue
+		}
+		return &release, nil
+	}
+
+	return nil, fmt.Errorf("no custom release found with tag prefix %q", customReleaseTagPrefix)
+}
+
 func (s *UpdateService) downloadFile(ctx context.Context, downloadURL, dest string) error {
 	return s.githubClient.DownloadFile(ctx, downloadURL, dest, maxDownloadSize)
 }
 
-func (s *UpdateService) getArchiveName() string {
+func getUpdateGitHubRepo() string {
+	if repo := strings.TrimSpace(os.Getenv("SUB2API_UPDATE_GITHUB_REPO")); repo != "" {
+		return repo
+	}
+	if repo := strings.TrimSpace(os.Getenv("GITHUB_REPO")); repo != "" {
+		return repo
+	}
+	return githubRepo
+}
+
+func (s *UpdateService) getArchiveNames() []string {
 	osName := runtime.GOOS
 	arch := runtime.GOARCH
-	return fmt.Sprintf("%s_%s", osName, arch)
+	names := []string{
+		fmt.Sprintf("sub2api-%s-%s", osName, arch),
+		fmt.Sprintf("%s_%s", osName, arch),
+	}
+	if osName == "windows" {
+		names = append([]string{fmt.Sprintf("sub2api-%s-%s.exe", osName, arch)}, names...)
+	}
+	return names
+}
+
+func isMatchingUpdateAsset(assetName string, archiveNames []string) bool {
+	if strings.HasSuffix(assetName, ".txt") {
+		return false
+	}
+	for _, archiveName := range archiveNames {
+		if strings.Contains(assetName, archiveName) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeReleaseVersion(tagName string) string {
+	tagName = strings.TrimPrefix(tagName, customReleaseTagPrefix)
+	return strings.TrimPrefix(tagName, "v")
 }
 
 // validateDownloadURL checks if the URL is from an allowed domain
@@ -517,7 +575,7 @@ func (s *UpdateService) saveToCache(ctx context.Context, info *UpdateInfo) {
 	_ = s.cache.SetUpdateInfo(ctx, string(data), time.Duration(updateCacheTTL)*time.Second)
 }
 
-// compareVersions compares two semantic versions
+// compareVersions compares semantic versions and custom template revisions.
 func compareVersions(current, latest string) int {
 	currentParts := parseVersion(current)
 	latestParts := parseVersion(latest)
@@ -530,16 +588,27 @@ func compareVersions(current, latest string) int {
 			return 1
 		}
 	}
+	if currentParts[3] < latestParts[3] {
+		return -1
+	}
+	if currentParts[3] > latestParts[3] {
+		return 1
+	}
 	return 0
 }
 
-func parseVersion(v string) [3]int {
+func parseVersion(v string) [4]int {
+	v = strings.TrimPrefix(v, customReleaseTagPrefix)
 	v = strings.TrimPrefix(v, "v")
-	if base, _, ok := strings.Cut(v, "-"); ok {
+	revision := 0
+	if base, revisionText, ok := strings.Cut(v, "-"); ok {
+		if parsed, err := strconv.Atoi(revisionText); err == nil {
+			revision = parsed
+		}
 		v = base
 	}
 	parts := strings.Split(v, ".")
-	result := [3]int{0, 0, 0}
+	result := [4]int{0, 0, 0, revision}
 	for i := 0; i < len(parts) && i < 3; i++ {
 		if parsed, err := strconv.Atoi(parts[i]); err == nil {
 			result[i] = parsed
