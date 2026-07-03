@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 rem Sync official Sub2API updates into this fork/template workflow.
 rem Defaults:
@@ -18,12 +18,12 @@ if not defined SYNC_UPSTREAM_SELF_COPY (
   set "SYNC_UPSTREAM_SELF_COPY=1"
   set "SYNC_UPSTREAM_REPO_ROOT=%SCRIPT_REPO_ROOT%"
   set "SYNC_UPSTREAM_TEMP=%TEMP%\sub2api-sync-upstream-%RANDOM%-%RANDOM%.bat"
-  copy "%~f0" "%SYNC_UPSTREAM_TEMP%" >nul
+  copy "%~f0" "!SYNC_UPSTREAM_TEMP!" >nul
   if errorlevel 1 goto :fail
-  call "%SYNC_UPSTREAM_TEMP%" %*
+  call "!SYNC_UPSTREAM_TEMP!" %*
   set "SYNC_UPSTREAM_EXIT=%ERRORLEVEL%"
-  del "%SYNC_UPSTREAM_TEMP%" >nul 2>nul
-  exit /b %SYNC_UPSTREAM_EXIT%
+  del "!SYNC_UPSTREAM_TEMP!" >nul 2>nul
+  exit /b !SYNC_UPSTREAM_EXIT!
 )
 
 if defined SYNC_UPSTREAM_REPO_ROOT (
