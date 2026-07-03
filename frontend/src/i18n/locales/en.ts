@@ -397,6 +397,7 @@ export default {
     announcements: 'Announcements',
     apiKeys: 'API Keys',
     usage: 'Usage',
+    rechargeCenter: 'Recharge Center',
     redeem: 'Redeem',
     affiliate: 'Affiliate Rebates',
     affiliateManagement: 'Affiliate Rebates',
@@ -435,6 +436,24 @@ export default {
     channelMonitor: 'Channel Monitor',
     channelStatus: 'Channel Status',
     riskControl: 'Risk Control',
+  },
+
+  rechargeCenter: {
+    title: 'Recharge Center',
+    description: 'Click the button below to open the official recharge page in a new window.',
+    redeemPrefix: 'After purchase, use the recharge card code on the',
+    redeemLink: 'redeem page',
+    redeemSuffix: 'to add balance.',
+    infoTitle: 'Recharge information',
+    serviceName: 'Service',
+    serviceValue: 'Token Life Balance',
+    purchaseMethod: 'Method',
+    purchaseValue: 'Card code redemption',
+    exchangeRate: 'Exchange rate',
+    exchangeValue: 'CNY 1 = $1',
+    buyButton: 'Go to Recharge',
+    supportHint: 'If payment or redemption does not arrive, please contact the administrator.',
+    supportGroup: 'Support QQ group: 237078556'
   },
 
   // Auth

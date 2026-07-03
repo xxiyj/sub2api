@@ -397,6 +397,7 @@ export default {
     announcements: '公告',
     apiKeys: 'API 密钥',
     usage: '使用记录',
+    rechargeCenter: '充值中心',
     redeem: '兑换',
     affiliate: '邀请返利',
     affiliateManagement: '邀请返利',
@@ -435,6 +436,24 @@ export default {
     channelMonitor: '渠道监控',
     channelStatus: '渠道状态',
     riskControl: '风控中心',
+  },
+
+  rechargeCenter: {
+    title: '充值中心',
+    description: '点击下方按钮后，将在新窗口打开官方充值页面。',
+    redeemPrefix: '完成购买并获得充值卡密后，请前往',
+    redeemLink: '卡密兑换',
+    redeemSuffix: '完成到账。',
+    infoTitle: '充值信息',
+    serviceName: '服务名称',
+    serviceValue: 'Token Life 额度',
+    purchaseMethod: '购买方式',
+    purchaseValue: '卡密兑换',
+    exchangeRate: '兑换比例',
+    exchangeValue: '￥1元 = $1',
+    buyButton: '前往充值购买',
+    supportHint: '如支付完成并兑换后无法到账，请联系管理员处理。',
+    supportGroup: '售后Q群：237078556'
   },
 
   // Auth

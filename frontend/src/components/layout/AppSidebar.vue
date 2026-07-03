@@ -311,6 +311,22 @@ const GiftIcon = {
     )
 }
 
+const RechargeCenterIcon = {
+  render: () =>
+    h(
+      'svg',
+      { viewBox: '0 0 1024 1024', fill: 'currentColor', 'aria-hidden': 'true' },
+      [
+        h('path', {
+          d: 'M238.933333 643.657143l58.514286 53.638095 146.285714-146.285714-146.285714-146.285714-58.514286 53.638095 43.885715 43.885714H19.504762v97.52381h263.314286z'
+        }),
+        h('path', {
+          d: 'M794.819048 234.057143V92.647619H19.504762v316.952381h97.523809V331.580952h789.942858v131.657143h-243.809524v243.809524h243.809524v126.780952H117.028571v-136.533333h-97.523809v234.057143h984.990476V234.057143h-209.67619z m-677.790477 0v-43.885714h580.266667v43.885714H117.028571z m638.780953 375.466667v-48.761905h146.285714v48.761905h-146.285714z'
+        })
+      ]
+    )
+}
+
 const UserIcon = {
   render: () =>
     h(
@@ -672,9 +688,9 @@ function buildSelfNavItems(withDashboard: boolean): NavItem[] {
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
     { path: '/available-channels', label: t('nav.availableChannels'), icon: ChannelIcon, hideInSimpleMode: true, featureFlag: flagAvailableChannels },
     { path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon, featureFlag: flagChannelMonitor },
-    { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/purchase', label: t('nav.buySubscription'), icon: RechargeSubscriptionIcon, hideInSimpleMode: true, featureFlag: flagPayment },
     { path: '/orders', label: t('nav.myOrders'), icon: OrderListIcon, hideInSimpleMode: true, featureFlag: flagPayment },
+    { path: '/recharge-center', label: t('nav.rechargeCenter'), icon: RechargeCenterIcon, hideInSimpleMode: true },
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/affiliate', label: t('nav.affiliate'), icon: UsersIcon, hideInSimpleMode: true, featureFlag: flagAffiliate },
     { path: '/profile', label: t('nav.profile'), icon: UserIcon },

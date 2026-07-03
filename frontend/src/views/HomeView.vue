@@ -392,11 +392,11 @@ onMounted(() => {
   inset: 0;
   z-index: 0;
   background:
-    linear-gradient(rgba(74, 105, 149, 0.085) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(74, 105, 149, 0.085) 1px, transparent 1px),
     linear-gradient(rgba(74, 105, 149, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(74, 105, 149, 0.045) 1px, transparent 1px);
-  background-size: 42px 42px, 42px 42px, 168px 168px, 168px 168px;
+    linear-gradient(90deg, rgba(74, 105, 149, 0.045) 1px, transparent 1px),
+    linear-gradient(rgba(74, 105, 149, 0.024) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 105, 149, 0.024) 1px, transparent 1px);
+  background-size: 56px 56px, 56px 56px, 224px 224px, 224px 224px;
   pointer-events: none;
 }
 
@@ -1022,11 +1022,11 @@ onMounted(() => {
 
 .tl-home-dark::before {
   background:
-    linear-gradient(rgba(125, 211, 252, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(125, 211, 252, 0.1) 1px, transparent 1px),
-    linear-gradient(rgba(125, 211, 252, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(125, 211, 252, 0.045) 1px, transparent 1px);
-  background-size: 42px 42px, 42px 42px, 168px 168px, 168px 168px;
+    linear-gradient(rgba(125, 211, 252, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.055) 1px, transparent 1px),
+    linear-gradient(rgba(125, 211, 252, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.025) 1px, transparent 1px);
+  background-size: 56px 56px, 56px 56px, 224px 224px, 224px 224px;
 }
 
 .tl-home-dark .tl-brand,

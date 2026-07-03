@@ -62,3 +62,8 @@ func TestUpdateServicePerformUpdateNoUpdateReturnsSentinel(t *testing.T) {
 	require.True(t, errors.Is(err, ErrNoUpdateAvailable))
 	require.ErrorIs(t, err, ErrNoUpdateAvailable)
 }
+
+func TestCompareVersionsIgnoresTemplateRevisionSuffix(t *testing.T) {
+	require.Equal(t, 0, compareVersions("0.1.143-2", "0.1.143"))
+	require.Equal(t, 0, compareVersions("v0.1.143-2", "v0.1.143"))
+}
