@@ -365,8 +365,53 @@ If a frontend change is intended to ship in the backend binary, verify the embed
 - `deploy/docker-compose*.yml`
 - `deploy/README.md`
 - `docs/TEMPLATE_WORKFLOW_CN.md`
+- `.github/workflows/custom-release.yml`
+- `.github/workflows/release.yml`
 
 These define how this fork is actually released and operated.
+
+### GitHub Actions trigger rules
+
+Do not assume "GitHub Actions only run on tags" in this repository.
+
+Current workflow trigger behavior:
+
+- `backend-ci.yml`
+  - runs on every `push`
+  - runs on every `pull_request`
+- `security-scan.yml`
+  - runs on every `push`
+  - runs on every `pull_request`
+  - also runs on a weekly schedule
+- `cla.yml`
+  - runs only for PR/issue-comment related events
+  - effectively relevant to the upstream repository contribution flow
+- `release.yml`
+  - release workflow
+  - runs on tag push matching `v*`
+  - can also be started manually with `workflow_dispatch`
+- `custom-release.yml`
+  - custom template release workflow
+  - runs on tag push matching `custom-v*`
+  - can also be started manually with `workflow_dispatch`
+
+### Tag naming rules that matter
+
+If the goal is to trigger a release workflow by tag push, the tag name must match the workflow pattern:
+
+- upstream/general release: `v*`
+  - example: `v0.1.143`
+- custom template release: `custom-v*`
+  - example: `custom-v0.1.143-1`
+
+If the tag does not match these patterns, the corresponding release workflow will not trigger from tag push.
+
+### Practical rule for agents
+
+- ordinary commit/push: expect CI and security workflows to run
+- tag push `v*`: expect upstream/general release workflow
+- tag push `custom-v*`: expect custom template release workflow
+- if the user asks about "release by tag", verify the exact tag prefix before acting
 
 ### Runtime configuration
 
