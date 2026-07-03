@@ -233,7 +233,36 @@ backend/bin/sub2api
 
 以下步骤适用于官方 `install.sh` 安装的非 Docker 部署。
 
-日常推荐方式：本地编译两个 Linux 版本，上传到你自己 fork 仓库的 GitHub Releases。服务器使用一条 `curl` 命令运行更新脚本，脚本根据 `uname -m` 自动下载对应架构的二进制。
+日常推荐方式：给 `my-template` 打一个 `custom-v*` tag，由 GitHub Actions 自动编译两个 Linux 版本并上传到你自己 fork 仓库的 GitHub Releases。服务器使用一条 `curl` 命令运行更新脚本，脚本根据 `uname -m` 自动下载对应架构的二进制。
+
+发布自定义 Release：
+
+```bash
+git checkout my-template
+git pull origin my-template
+git tag custom-v0.1.143-1
+git push origin custom-v0.1.143-1
+```
+
+GitHub Actions 会运行：
+
+```text
+.github/workflows/custom-release.yml
+```
+
+它会自动生成并上传三个 Release assets：
+
+```text
+sub2api-linux-amd64
+sub2api-linux-arm64
+checksums.txt
+```
+
+如果需要重新上传同一个 tag 的 assets，可以在 GitHub Actions 页面手动运行 `Custom Template Release` workflow，并填写同一个 tag；workflow 会覆盖同名 assets。
+
+### 本地手动构建 Release Assets
+
+如果不想用 GitHub Actions，也可以在本地构建同名 assets 后手动上传到 GitHub Releases。
 
 本地一键构建：
 
@@ -250,7 +279,7 @@ dist-custom/sub2api-linux-arm64
 dist-custom/checksums.txt
 ```
 
-把这三个文件上传到你自己的 GitHub Release：
+本地构建会输出：
 
 ```text
 sub2api-linux-amd64

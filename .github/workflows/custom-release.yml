@@ -1,0 +1,120 @@
+name: Custom Template Release
+
+on:
+  push:
+    tags:
+      - 'custom-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish, for example custom-v0.1.143-1'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_NAME="${{ github.event.inputs.tag }}"
+          else
+            TAG_NAME="${GITHUB_REF_NAME}"
+          fi
+
+          VERSION="${TAG_NAME#custom-v}"
+          VERSION="${VERSION#v}"
+          COMMIT="$(git rev-parse --short=12 HEAD)"
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          echo "tag=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "commit=${COMMIT}" >> "$GITHUB_OUTPUT"
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          check-latest: false
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Verify Go version
+        run: |
+          go version | grep -q 'go1.26.4'
+
+      - name: Build custom release binaries
+        shell: bash
+        run: |
+          mkdir -p dist-custom
+
+          for arch in amd64 arm64; do
+            echo "Building linux/${arch}"
+            (
+              cd backend
+              CGO_ENABLED=0 GOOS=linux GOARCH="${arch}" go build \
+                -tags embed \
+                -ldflags="-s -w -X main.Version=${{ steps.meta.outputs.version }} -X main.Commit=${{ steps.meta.outputs.commit }} -X main.Date=${{ steps.meta.outputs.date }} -X main.BuildType=release" \
+                -trimpath \
+                -o "../dist-custom/sub2api-linux-${arch}" \
+                ./cmd/server
+            )
+          done
+
+          (
+            cd dist-custom
+            sha256sum sub2api-linux-amd64 sub2api-linux-arm64 > checksums.txt
+          )
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.meta.outputs.tag }}
+        shell: bash
+        run: |
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            gh release upload "${TAG_NAME}" \
+              dist-custom/sub2api-linux-amd64 \
+              dist-custom/sub2api-linux-arm64 \
+              dist-custom/checksums.txt \
+              --clobber
+          else
+            gh release create "${TAG_NAME}" \
+              dist-custom/sub2api-linux-amd64 \
+              dist-custom/sub2api-linux-arm64 \
+              dist-custom/checksums.txt \
+              --title "Custom Template ${TAG_NAME}" \
+              --notes "Custom Sub2API template build from ${GITHUB_SHA}."
+          fi
