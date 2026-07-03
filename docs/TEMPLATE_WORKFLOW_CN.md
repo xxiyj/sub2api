@@ -293,6 +293,14 @@ checksums.txt
 curl -fsSL https://raw.githubusercontent.com/xxiyj/sub2api/my-template/deploy/update-custom-binary.sh | sudo GITHUB_REPO=xxiyj/sub2api bash
 ```
 
+如果更新后需要手动回退到最近一次旧二进制备份：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xxiyj/sub2api/my-template/deploy/rollback-custom-binary.sh | sudo bash
+```
+
+回退脚本只恢复 `/opt/sub2api/backups/bin/` 中最近的旧二进制，不恢复数据库。如果新版本已经执行了不兼容的数据库迁移，需要另外恢复数据库备份。
+
 如果要指定某个 Release tag，而不是 latest：
 
 ```bash

@@ -20,6 +20,7 @@ This directory contains files for deploying Sub2API on Linux servers.
 | `DOCKER.md` | Docker Hub documentation |
 | `install.sh` | One-click binary installation script |
 | `update-custom-binary.sh` | One-command updater for custom/template non-Docker binary deployments |
+| `rollback-custom-binary.sh` | One-command rollback for custom/template non-Docker binary deployments |
 | `install-datamanagementd.sh` | datamanagementd 一键安装脚本 |
 | `sub2api.service` | Systemd service unit file |
 | `sub2api-datamanagementd.service` | datamanagementd systemd service unit file |
