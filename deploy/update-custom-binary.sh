@@ -19,6 +19,8 @@ REPO_URL="${SUB2API_REPO_URL:-git@github.com:xxiyj/sub2api.git}"
 BRANCH="${SUB2API_BRANCH:-my-template}"
 BUILD_ROOT="${SUB2API_BUILD_ROOT:-/opt/sub2api-build}"
 HEALTH_URL="${SUB2API_HEALTH_URL:-http://127.0.0.1:8080/health}"
+HEALTH_RETRIES="${SUB2API_HEALTH_RETRIES:-20}"
+HEALTH_INTERVAL="${SUB2API_HEALTH_INTERVAL:-3}"
 GOOS_VALUE="${GOOS_VALUE:-linux}"
 GOARCH_VALUE="${GOARCH_VALUE:-amd64}"
 KEEP_BACKUPS="${KEEP_BACKUPS:-10}"
@@ -49,6 +51,8 @@ Options:
   --binary-dir DIR   Select sub2api-linux-amd64 or sub2api-linux-arm64 from DIR.
   --build-from-git   Build on the server from --repo and --branch.
   --health-url URL   Health check URL. Default: ${HEALTH_URL}
+  --health-retries N Health check retry count. Default: ${HEALTH_RETRIES}
+  --health-interval N Seconds between health checks. Default: ${HEALTH_INTERVAL}
   --goarch ARCH      Target architecture. Default: ${GOARCH_VALUE}
   --skip-health      Skip HTTP health check after restart.
   -h, --help         Show this help.
@@ -61,6 +65,8 @@ Environment:
   SUB2API_BRANCH     Same as --branch
   SUB2API_BUILD_ROOT Build workspace. Default: /opt/sub2api-build
   SUB2API_HEALTH_URL Same as --health-url
+  SUB2API_HEALTH_RETRIES Same as --health-retries
+  SUB2API_HEALTH_INTERVAL Same as --health-interval
   GOARCH_VALUE       linux target arch: amd64 or arm64
   KEEP_BACKUPS       Number of old binary backups to keep. Default: 10
 
@@ -137,6 +143,16 @@ parse_args() {
       --health-url)
         [[ $# -ge 2 ]] || die "--health-url requires a value"
         HEALTH_URL="$2"
+        shift 2
+        ;;
+      --health-retries)
+        [[ $# -ge 2 ]] || die "--health-retries requires a value"
+        HEALTH_RETRIES="$2"
+        shift 2
+        ;;
+      --health-interval)
+        [[ $# -ge 2 ]] || die "--health-interval requires a value"
+        HEALTH_INTERVAL="$2"
         shift 2
         ;;
       --goarch)
@@ -344,8 +360,24 @@ check_service() {
   fi
 
   require_command curl
-  log "Checking health endpoint: ${HEALTH_URL}"
-  curl -fsS --max-time 10 "${HEALTH_URL}" >/dev/null
+  [[ "${HEALTH_RETRIES}" =~ ^[0-9]+$ && "${HEALTH_RETRIES}" -gt 0 ]] || die "--health-retries must be a positive integer"
+  [[ "${HEALTH_INTERVAL}" =~ ^[0-9]+$ && "${HEALTH_INTERVAL}" -gt 0 ]] || die "--health-interval must be a positive integer"
+
+  log "Checking health endpoint: ${HEALTH_URL} (${HEALTH_RETRIES} attempts, ${HEALTH_INTERVAL}s interval)"
+  local attempt
+  for ((attempt=1; attempt<=HEALTH_RETRIES; attempt++)); do
+    if curl -fsS --max-time 10 "${HEALTH_URL}" >/dev/null; then
+      log "Health check passed on attempt ${attempt}"
+      return 0
+    fi
+
+    if [[ "${attempt}" -lt "${HEALTH_RETRIES}" ]]; then
+      log "Health check attempt ${attempt}/${HEALTH_RETRIES} failed; retrying in ${HEALTH_INTERVAL}s"
+      sleep "${HEALTH_INTERVAL}"
+    fi
+  done
+
+  return 1
 }
 
 rollback_binary() {
