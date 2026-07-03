@@ -121,6 +121,8 @@ CLAUDE.md
 scripts
 !scripts/
 !scripts/sync-upstream.bat
+!backend/scripts/
+!backend/scripts/resolve-version.sh
 .code-review-state
 #openspec/
 code-reviews/

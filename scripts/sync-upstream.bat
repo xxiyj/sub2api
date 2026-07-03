@@ -11,7 +11,26 @@ set "TEMPLATE_BRANCH=my-template"
 set "UPSTREAM_REMOTE=upstream"
 set "ORIGIN_REMOTE=origin"
 
-cd /d "%~dp0\.."
+set "SCRIPT_REPO_ROOT=%~dp0\.."
+for %%I in ("%SCRIPT_REPO_ROOT%") do set "SCRIPT_REPO_ROOT=%%~fI"
+
+if not defined SYNC_UPSTREAM_SELF_COPY (
+  set "SYNC_UPSTREAM_SELF_COPY=1"
+  set "SYNC_UPSTREAM_REPO_ROOT=%SCRIPT_REPO_ROOT%"
+  set "SYNC_UPSTREAM_TEMP=%TEMP%\sub2api-sync-upstream-%RANDOM%-%RANDOM%.bat"
+  copy "%~f0" "%SYNC_UPSTREAM_TEMP%" >nul
+  if errorlevel 1 goto :fail
+  call "%SYNC_UPSTREAM_TEMP%" %*
+  set "SYNC_UPSTREAM_EXIT=%ERRORLEVEL%"
+  del "%SYNC_UPSTREAM_TEMP%" >nul 2>nul
+  exit /b %SYNC_UPSTREAM_EXIT%
+)
+
+if defined SYNC_UPSTREAM_REPO_ROOT (
+  cd /d "%SYNC_UPSTREAM_REPO_ROOT%"
+) else (
+  cd /d "%SCRIPT_REPO_ROOT%"
+)
 if errorlevel 1 goto :fail
 
 git rev-parse --is-inside-work-tree >nul 2>nul
