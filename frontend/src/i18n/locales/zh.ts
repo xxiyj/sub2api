@@ -394,6 +394,9 @@ export default {
   // Navigation
   nav: {
     dashboard: '仪表盘',
+    groupAccess: '接入',
+    groupConsumption: '消费',
+    groupAccount: '账户',
     announcements: '公告',
     apiKeys: 'API 密钥',
     usage: '使用记录',
