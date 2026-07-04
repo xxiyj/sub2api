@@ -232,13 +232,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/redeem',
     name: 'Redeem',
-    component: () => import('@/views/user/RedeemView.vue'),
+    component: () => import('@/views/user/RechargeCenterView.vue'),
     meta: {
       requiresAuth: true,
       requiresAdmin: false,
-      title: 'Redeem Code',
-      titleKey: 'redeem.title',
-      descriptionKey: 'redeem.description'
+      title: 'Recharge Center',
+      titleKey: 'rechargeCenter.title',
+      descriptionKey: 'rechargeCenter.description'
     }
   },
   {

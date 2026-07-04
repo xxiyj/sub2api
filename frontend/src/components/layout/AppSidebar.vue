@@ -704,7 +704,6 @@ function buildSelfNavGroups(withDashboard: boolean): NavGroup[] {
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
     { path: '/purchase', label: t('nav.buySubscription'), icon: RechargeSubscriptionIcon, hideInSimpleMode: true, featureFlag: flagPayment },
     { path: '/recharge-center', label: t('nav.rechargeCenter'), icon: RechargeCenterIcon, hideInSimpleMode: true },
-    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/orders', label: t('nav.myOrders'), icon: OrderListIcon, hideInSimpleMode: true, featureFlag: flagPayment },
   ]
 

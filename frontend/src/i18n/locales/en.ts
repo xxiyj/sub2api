@@ -444,6 +444,7 @@ export default {
   rechargeCenter: {
     title: 'Recharge Center',
     description: 'Click the button below to open the official recharge page in a new window.',
+    redeemInlineHint: 'After purchase, redeem the card code on this page to add balance.',
     redeemPrefix: 'After purchase, use the recharge card code on the',
     redeemLink: 'redeem page',
     redeemSuffix: 'to add balance.',
