@@ -2,13 +2,13 @@
   <AppLayout>
     <div class="recharge-page mx-auto w-full max-w-6xl">
       <section class="recharge-card">
+        <div class="recharge-badge">
+          <span class="recharge-dot"></span>
+          Token Life
+        </div>
+
         <div class="recharge-columns">
           <div class="recharge-left">
-            <div class="recharge-badge">
-              <span class="recharge-dot"></span>
-              Token Life
-            </div>
-
             <h1>{{ t('rechargeCenter.title') }}</h1>
             <p>{{ t('rechargeCenter.description') }}</p>
             <p>{{ t('rechargeCenter.redeemInlineHint') }}</p>
@@ -51,10 +51,23 @@
               {{ t('rechargeCenter.buyButton') }}
             </a>
 
-            <div class="recharge-note">
-              <p>{{ t('rechargeCenter.supportHint') }}</p>
-              <p>{{ t('rechargeCenter.supportGroup') }}</p>
-            </div>
+            <section class="recharge-help">
+              <div class="help-icon">
+                <Icon name="infoCircle" size="md" />
+              </div>
+              <div>
+                <h2>{{ t('redeem.aboutCodes') }}</h2>
+                <ul>
+                  <li>{{ t('redeem.codeRule1') }}</li>
+                  <li>{{ t('redeem.codeRule2') }}</li>
+                  <li>
+                    {{ t('redeem.codeRule3') }}
+                    <span v-if="contactInfo" class="support-chip">{{ contactInfo }}</span>
+                  </li>
+                  <li>{{ t('redeem.codeRule4') }}</li>
+                </ul>
+              </div>
+            </section>
           </div>
 
           <div class="recharge-right">
@@ -147,24 +160,6 @@
                 </div>
               </div>
             </transition>
-
-            <section class="recharge-help">
-              <div class="help-icon">
-                <Icon name="infoCircle" size="md" />
-              </div>
-              <div>
-                <h2>{{ t('redeem.aboutCodes') }}</h2>
-                <ul>
-                  <li>{{ t('redeem.codeRule1') }}</li>
-                  <li>{{ t('redeem.codeRule2') }}</li>
-                  <li>
-                    {{ t('redeem.codeRule3') }}
-                    <span v-if="contactInfo" class="support-chip">{{ contactInfo }}</span>
-                  </li>
-                  <li>{{ t('redeem.codeRule4') }}</li>
-                </ul>
-              </div>
-            </section>
 
             <section class="activity-panel">
               <div class="activity-header">
@@ -387,7 +382,7 @@ onMounted(async () => {
 .recharge-columns {
   display: grid;
   grid-template-columns: minmax(300px, 0.86fr) minmax(420px, 1.14fr);
-  gap: 28px;
+  gap: 48px;
   align-items: start;
 }
 
@@ -399,6 +394,7 @@ onMounted(async () => {
 .recharge-left {
   position: sticky;
   top: 92px;
+  padding-top: 62px;
 }
 
 .dark .recharge-card {
@@ -414,6 +410,9 @@ onMounted(async () => {
 }
 
 .recharge-badge {
+  position: absolute;
+  left: 34px;
+  top: 34px;
   display: inline-flex;
   min-height: 34px;
   align-items: center;
@@ -424,7 +423,7 @@ onMounted(async () => {
   color: #0f766e;
   font-size: 13px;
   font-weight: 760;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .dark .recharge-badge {
@@ -997,16 +996,23 @@ p {
 
   .recharge-columns {
     grid-template-columns: 1fr;
+    gap: 28px;
   }
 
   .recharge-left {
     position: static;
+    padding-top: 62px;
   }
 }
 
 @media (max-width: 760px) {
   .recharge-card {
     padding: 28px 22px;
+  }
+
+  .recharge-badge {
+    left: 22px;
+    top: 28px;
   }
 }
 
