@@ -164,6 +164,27 @@
             <section class="activity-panel">
               <div class="activity-header">
                 <h2>{{ t('redeem.recentActivity') }}</h2>
+                <div v-if="showHistoryPagination" class="activity-pagination">
+                  <button
+                    type="button"
+                    class="activity-page-button"
+                    :disabled="historyPage === 1"
+                    aria-label="Previous page"
+                    @click="changeHistoryPage(historyPage - 1)"
+                  >
+                    <Icon name="chevronLeft" size="sm" />
+                  </button>
+                  <span>{{ historyPage }} / {{ historyTotalPages }}</span>
+                  <button
+                    type="button"
+                    class="activity-page-button"
+                    :disabled="historyPage === historyTotalPages"
+                    aria-label="Next page"
+                    @click="changeHistoryPage(historyPage + 1)"
+                  >
+                    <Icon name="chevronRight" size="sm" />
+                  </button>
+                </div>
               </div>
 
               <div v-if="loadingHistory" class="activity-loading">
@@ -185,7 +206,7 @@
               </div>
 
               <div v-else-if="history.length > 0" class="activity-list">
-                <div v-for="item in history" :key="item.id" class="activity-item">
+                <div v-for="item in paginatedHistory" :key="item.id" class="activity-item">
                   <div class="flex min-w-0 items-center gap-3">
                     <div :class="['activity-icon', getHistoryTone(item)]">
                       <Icon
@@ -258,6 +279,19 @@ const errorMessage = ref('')
 const history = ref<RedeemHistoryItem[]>([])
 const loadingHistory = ref(false)
 const contactInfo = ref('')
+const historyPageSize = 5
+const historyPage = ref(1)
+
+const historyTotalPages = computed(() => Math.max(1, Math.ceil(history.value.length / historyPageSize)))
+const showHistoryPagination = computed(() => history.value.length > historyPageSize)
+const paginatedHistory = computed(() => {
+  const start = (historyPage.value - 1) * historyPageSize
+  return history.value.slice(start, start + historyPageSize)
+})
+
+const changeHistoryPage = (page: number) => {
+  historyPage.value = Math.min(Math.max(page, 1), historyTotalPages.value)
+}
 
 const isBalanceType = (type: string) => type === 'balance' || type === 'admin_balance'
 const isSubscriptionType = (type: string) => type === 'subscription'
@@ -306,6 +340,7 @@ const fetchHistory = async () => {
   loadingHistory.value = true
   try {
     history.value = await redeemAPI.getHistory()
+    changeHistoryPage(1)
   } catch (error) {
     console.error('Failed to fetch history:', error)
   } finally {
@@ -789,12 +824,72 @@ p {
 }
 
 .activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
   padding: 18px 24px;
 }
 
 .dark .activity-header {
   border-bottom-color: rgba(148, 163, 184, 0.13);
+}
+
+.activity-pagination {
+  display: inline-flex;
+  min-width: 148px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1;
+}
+
+.dark .activity-pagination {
+  color: #9fb2ca;
+}
+
+.activity-page-button {
+  display: inline-flex;
+  height: 28px;
+  width: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.72);
+  color: #0f766e;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.activity-page-button:not(:disabled):hover {
+  border-color: rgba(20, 184, 166, 0.42);
+  background: rgba(20, 184, 166, 0.1);
+  color: #0d9488;
+}
+
+.activity-page-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.dark .activity-page-button {
+  border-color: rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.62);
+  color: #67e8f9;
+}
+
+.dark .activity-page-button:not(:disabled):hover {
+  border-color: rgba(34, 211, 238, 0.34);
+  background: rgba(34, 211, 238, 0.12);
+  color: #a5f3fc;
 }
 
 .activity-loading,
@@ -1029,6 +1124,15 @@ p {
     display: block;
     margin-top: 4px;
     text-align: left;
+  }
+
+  .activity-header {
+    flex-wrap: wrap;
+  }
+
+  .activity-pagination {
+    min-width: 0;
+    justify-content: flex-start;
   }
 
   .activity-item {
