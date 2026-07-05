@@ -58,10 +58,44 @@
         window.location.replace('/docs/index.html#/en/')
       }
 
+      function syncDocsThemeIcon() {
+        const icon = document.querySelector('.theme-icon')
+        if (icon) {
+          icon.textContent = document.body.dataset.theme === 'dark' ? '☾' : '☀'
+        }
+      }
+
+      document.addEventListener(
+        'click',
+        function (event) {
+          const themeToggle = event.target.closest('.theme-toggle')
+          if (themeToggle) {
+            event.preventDefault()
+            const nextTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark'
+            document.body.dataset.theme = nextTheme
+            localStorage.setItem('token-life-docs-theme', nextTheme)
+            syncDocsThemeIcon()
+            return
+          }
+
+          const langLink = event.target.closest('[data-doc-lang]')
+          if (langLink) {
+            localStorage.setItem('token-life-docs-lang', langLink.dataset.docLang)
+          }
+        },
+        true
+      )
+
       window.$docsify = {
         name: 'Token Life Docs',
         repo: '',
-        loadSidebar: true,
+        basePath: '/docs/',
+        homepage: 'README.md',
+        loadSidebar: '_sidebar.md',
+        alias: {
+          '/en/.*/_sidebar.md': '/en/_sidebar.md',
+          '/.*/_sidebar.md': '/_sidebar.md'
+        },
         loadNavbar: false,
         subMaxLevel: 3,
         auto2top: true,
@@ -113,25 +147,7 @@
     <script src="./docs-assets/search.min.js"></script>
     <script src="./docs-assets/docsify-copy-code.min.js"></script>
     <script>
-      const themeButton = document.querySelector('.theme-toggle')
-      const themeIcon = document.querySelector('.theme-icon')
-
-      function syncThemeIcon() {
-        themeIcon.textContent = document.body.dataset.theme === 'dark' ? '☾' : '☀'
-      }
-
-      syncThemeIcon()
-      document.querySelectorAll('[data-doc-lang]').forEach(function (link) {
-        link.addEventListener('click', function () {
-          localStorage.setItem('token-life-docs-lang', link.dataset.docLang)
-        })
-      })
-      themeButton.addEventListener('click', function () {
-        const nextTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark'
-        document.body.dataset.theme = nextTheme
-        localStorage.setItem('token-life-docs-theme', nextTheme)
-        syncThemeIcon()
-      })
+      syncDocsThemeIcon()
     </script>
   </body>
 </html>
