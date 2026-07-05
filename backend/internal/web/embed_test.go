@@ -541,6 +541,37 @@ func TestFrontendServer_Middleware(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Contains(t, w.Header().Get("Content-Type"), "image/png")
 	})
+
+	t.Run("serves_docs_entry_files", func(t *testing.T) {
+		provider := &mockSettingsProvider{
+			settings: map[string]string{"test": "value"},
+		}
+
+		server, err := NewFrontendServer(provider)
+		require.NoError(t, err)
+
+		router := gin.New()
+		router.Use(server.Middleware())
+
+		docPaths := []string{
+			"/docs/index.html",
+			"/docs/",
+			"/docs/en/",
+			"/docs/quick-start/index.html",
+		}
+
+		for _, path := range docPaths {
+			t.Run(path, func(t *testing.T) {
+				w := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodGet, path, nil)
+				router.ServeHTTP(w, req)
+
+				assert.Equal(t, http.StatusOK, w.Code)
+				assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
+				assert.Contains(t, w.Body.String(), "Token Life Docs")
+			})
+		}
+	})
 }
 
 func TestNewFrontendServer(t *testing.T) {
@@ -577,6 +608,11 @@ func TestHasEmbeddedFrontend(t *testing.T) {
 	t.Run("returns_true_when_frontend_embedded", func(t *testing.T) {
 		result := HasEmbeddedFrontend()
 		assert.True(t, result)
+	})
+
+	t.Run("embeds_docs_entry", func(t *testing.T) {
+		_, err := frontendFS.ReadFile("dist/docs/index.html")
+		assert.NoError(t, err)
 	})
 }
 
@@ -664,6 +700,65 @@ func TestServeEmbeddedFrontend(t *testing.T) {
 				assert.True(t, nextCalled, "next handler should be called for API route")
 			})
 		}
+	})
+
+	t.Run("serves_docs_entry_files", func(t *testing.T) {
+		middleware := ServeEmbeddedFrontend()
+
+		router := gin.New()
+		router.Use(middleware)
+
+		docPaths := []string{
+			"/docs/index.html",
+			"/docs/",
+			"/docs/en/",
+			"/docs/quick-start/index.html",
+		}
+
+		for _, path := range docPaths {
+			t.Run(path, func(t *testing.T) {
+				w := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodGet, path, nil)
+				router.ServeHTTP(w, req)
+
+				assert.Equal(t, http.StatusOK, w.Code)
+				assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
+				assert.Contains(t, w.Body.String(), "Token Life Docs")
+			})
+		}
+	})
+}
+
+func TestResolveStaticPath(t *testing.T) {
+	existing := map[string]bool{
+		"docs/index.html":               true,
+		"docs/en/index.html":            true,
+		"docs/quick-start/index.html":   true,
+		"assets/app.css":                true,
+	}
+	exists := func(path string) bool { return existing[path] }
+
+	tests := map[string]string{
+		"docs":                  "docs/index.html",
+		"docs/":                 "docs/index.html",
+		"docs/en":               "docs/en/index.html",
+		"docs/en/":              "docs/en/index.html",
+		"docs/quick-start":      "docs/quick-start/index.html",
+		"docs/quick-start/":     "docs/quick-start/index.html",
+		"assets/app.css":        "assets/app.css",
+	}
+
+	for input, expected := range tests {
+		t.Run(input, func(t *testing.T) {
+			resolved, ok := resolveStaticPath(input, exists)
+			assert.True(t, ok)
+			assert.Equal(t, expected, resolved)
+		})
+	}
+
+	t.Run("returns_false_for_missing_path", func(t *testing.T) {
+		_, ok := resolveStaticPath("missing-docs", exists)
+		assert.False(t, ok)
 	})
 }
 

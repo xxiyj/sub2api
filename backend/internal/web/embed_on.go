@@ -97,21 +97,28 @@ func (s *FrontendServer) Middleware() gin.HandlerFunc {
 			cleanPath = "index.html"
 		}
 
+		resolvedPath, ok := s.resolveStaticPath(cleanPath)
+
 		// For index.html or SPA routes, serve with injected settings
-		if cleanPath == "index.html" || !s.fileExists(cleanPath) {
+		if cleanPath == "index.html" || !ok {
 			s.serveIndexHTML(c)
 			return
 		}
 
 		// Try local override first
-		if s.tryServeOverride(c, cleanPath) {
+		if s.tryServeOverride(c, resolvedPath) {
 			return
 		}
 
+		c.Request.URL.Path = "/" + resolvedPath
 		// Serve static files normally
 		s.fileServer.ServeHTTP(c.Writer, c.Request)
 		c.Abort()
 	}
+}
+
+func (s *FrontendServer) resolveStaticPath(path string) (string, bool) {
+	return resolveStaticPath(path, s.fileExists)
 }
 
 func (s *FrontendServer) fileExists(path string) bool {
@@ -121,6 +128,41 @@ func (s *FrontendServer) fileExists(path string) bool {
 	}
 	_ = file.Close()
 	return true
+}
+
+func resolveStaticPath(path string, exists func(string) bool) (string, bool) {
+	path = strings.TrimPrefix(strings.TrimSpace(path), "/")
+	if path == "" {
+		path = "index.html"
+	}
+
+	candidates := make([]string, 0, 3)
+	if path == "index.html" {
+		candidates = append(candidates, path)
+	} else if strings.HasSuffix(path, "/") {
+		candidates = append(candidates, path+"index.html", strings.TrimSuffix(path, "/"))
+	} else if !strings.Contains(filepath.Base(path), ".") {
+		candidates = append(candidates, path+"/index.html", path)
+	} else {
+		candidates = append(candidates, path)
+	}
+
+	seen := make(map[string]struct{}, len(candidates))
+	for _, candidate := range candidates {
+		candidate = strings.TrimPrefix(candidate, "/")
+		if candidate == "" {
+			continue
+		}
+		if _, ok := seen[candidate]; ok {
+			continue
+		}
+		seen[candidate] = struct{}{}
+		if exists(candidate) {
+			return candidate, true
+		}
+	}
+
+	return "", false
 }
 
 // tryServeOverride checks if a local override file exists and serves it.
@@ -266,12 +308,19 @@ func ServeEmbeddedFrontend() gin.HandlerFunc {
 			cleanPath = "index.html"
 		}
 
-		if file, err := distFS.Open(cleanPath); err == nil {
+		if resolvedPath, ok := resolveStaticPath(cleanPath, func(path string) bool {
+			file, err := distFS.Open(path)
+			if err != nil {
+				return false
+			}
 			_ = file.Close()
+			return true
+		}); ok {
 			// Try local override first
-			if tryServeOverrideFile(c, overrideDir, cleanPath) {
+			if tryServeOverrideFile(c, overrideDir, resolvedPath) {
 				return
 			}
+			c.Request.URL.Path = "/" + resolvedPath
 			fileServer.ServeHTTP(c.Writer, c.Request)
 			c.Abort()
 			return
