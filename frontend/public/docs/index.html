@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Token Life API Token Platform client setup docs" />
+    <title>Token Life Docs</title>
+    <link rel="icon" href="/logo.png" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css" />
+    <link rel="stylesheet" href="./theme.css" />
+  </head>
+  <body data-theme="dark">
+    <header class="docs-topbar">
+      <a class="docs-brand" href="#/">
+        <img src="/logo.png" alt="Token Life" />
+        <span>Token Life Docs</span>
+      </a>
+      <nav class="docs-nav">
+        <a href="#/quick-start" data-doc-route="quick-start" data-i18n-zh="快速开始" data-i18n-en="Quick Start">快速开始</a>
+        <a href="#/claude-code" data-doc-route="claude-code">Claude Code</a>
+        <a href="#/codex" data-doc-route="codex">Codex</a>
+        <a href="#/cc-switch" data-doc-route="cc-switch" data-i18n-zh="CC Switch 导入" data-i18n-en="CC Switch Import">CC Switch 导入</a>
+        <a href="/" target="_blank" rel="noreferrer" data-i18n-zh="控制台 ↗" data-i18n-en="Console ↗">控制台 ↗</a>
+      </nav>
+      <div class="language-switch" aria-label="切换语言">
+        <a href="#/" data-doc-lang="zh">中文</a>
+        <span>/</span>
+        <a href="#/en/" data-doc-lang="en">EN</a>
+      </div>
+      <button class="theme-toggle" type="button" aria-label="切换主题" title="切换主题">
+        <span class="theme-icon">☾</span>
+      </button>
+    </header>
+    <div id="app">
+      <h1>Token Life 文档</h1>
+      <p>如果文档应用正在加载，请稍等片刻。你也可以直接打开下面的 Markdown 文档：</p>
+      <ul>
+        <li><a href="./README.md">文档首页</a></li>
+        <li><a href="./claude-code.md">Claude Code 接入</a></li>
+        <li><a href="./codex.md">Codex CLI 接入</a></li>
+        <li><a href="./cc-switch.md">CC Switch 接入</a></li>
+      </ul>
+    </div>
+    <script>
+      const storedTheme = localStorage.getItem('token-life-docs-theme')
+      const preferredTheme =
+        storedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      document.body.dataset.theme = preferredTheme
+      const storedLang = localStorage.getItem('token-life-docs-lang')
+      const browserLang = navigator.language || ''
+      const hashPath = window.location.hash.replace(/^#/, '')
+      const isEnglishPath = hashPath === '/en/' || hashPath.startsWith('/en/')
+      const isRootEntry = !hashPath || hashPath === '/' || hashPath === '/README'
+
+      if (!storedLang && isRootEntry && !browserLang.toLowerCase().startsWith('zh')) {
+        window.location.replace(`${window.location.pathname}#/en/`)
+      } else if (storedLang === 'en' && isRootEntry) {
+        window.location.replace(`${window.location.pathname}#/en/`)
+      }
+
+      window.$docsify = {
+        name: 'Token Life Docs',
+        repo: '',
+        loadSidebar: true,
+        loadNavbar: false,
+        subMaxLevel: 3,
+        auto2top: true,
+        maxLevel: 4,
+        search: {
+          maxAge: 86400000,
+          paths: 'auto',
+          placeholder: '搜索文档',
+          noData: '没有找到相关内容',
+          depth: 4,
+          hideOtherSidebarContent: false,
+          namespace: 'token-life-docs'
+        },
+        copyCode: {
+          buttonText: '复制',
+          errorText: '复制失败',
+          successText: '已复制'
+        },
+        plugins: [
+          function (hook) {
+            hook.doneEach(function () {
+              const currentPath = window.location.hash.replace(/^#/, '')
+              const currentLang = currentPath === '/en/' || currentPath.startsWith('/en/') ? 'en' : 'zh'
+              document.documentElement.lang = currentLang === 'en' ? 'en' : 'zh-CN'
+              document.querySelectorAll('[data-doc-lang]').forEach(function (link) {
+                link.classList.toggle('active', link.dataset.docLang === currentLang)
+              })
+              document.querySelectorAll('[data-i18n-zh]').forEach(function (node) {
+                node.textContent = currentLang === 'en' ? node.dataset.i18nEn : node.dataset.i18nZh
+              })
+              document.querySelectorAll('[data-doc-route]').forEach(function (link) {
+                const prefix = currentLang === 'en' ? '/en/' : '/'
+                link.setAttribute('href', `#${prefix}${link.dataset.docRoute}`)
+              })
+              const searchInput = document.querySelector('.search input')
+              if (searchInput) {
+                searchInput.placeholder = currentLang === 'en' ? 'Search docs' : '搜索文档'
+              }
+              document.querySelectorAll('a[href^="http"]').forEach(function (link) {
+                link.setAttribute('target', '_blank')
+                link.setAttribute('rel', 'noreferrer')
+              })
+            })
+          }
+        ]
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/docsify@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2"></script>
+    <script>
+      const themeButton = document.querySelector('.theme-toggle')
+      const themeIcon = document.querySelector('.theme-icon')
+
+      function syncThemeIcon() {
+        themeIcon.textContent = document.body.dataset.theme === 'dark' ? '☾' : '☀'
+      }
+
+      syncThemeIcon()
+      document.querySelectorAll('[data-doc-lang]').forEach(function (link) {
+        link.addEventListener('click', function () {
+          localStorage.setItem('token-life-docs-lang', link.dataset.docLang)
+        })
+      })
+      themeButton.addEventListener('click', function () {
+        const nextTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark'
+        document.body.dataset.theme = nextTheme
+        localStorage.setItem('token-life-docs-theme', nextTheme)
+        syncThemeIcon()
+      })
+    </script>
+  </body>
+</html>
