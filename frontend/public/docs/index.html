@@ -53,9 +53,9 @@
       const isRootEntry = !hashPath || hashPath === '/' || hashPath === '/README'
 
       if (!storedLang && isRootEntry && !browserLang.toLowerCase().startsWith('zh')) {
-        window.location.replace(`${window.location.pathname}#/en/`)
+        window.location.replace('/docs/en/')
       } else if (storedLang === 'en' && isRootEntry) {
-        window.location.replace(`${window.location.pathname}#/en/`)
+        window.location.replace('/docs/en/')
       }
 
       window.$docsify = {
