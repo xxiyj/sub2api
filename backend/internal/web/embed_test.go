@@ -567,6 +567,7 @@ func TestFrontendServer_Middleware(t *testing.T) {
 				router.ServeHTTP(w, req)
 
 				assert.Equal(t, http.StatusOK, w.Code)
+				assert.Empty(t, w.Header().Get("Location"))
 				assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
 				assert.Contains(t, w.Body.String(), "Token Life Docs")
 			})
@@ -722,6 +723,7 @@ func TestServeEmbeddedFrontend(t *testing.T) {
 				router.ServeHTTP(w, req)
 
 				assert.Equal(t, http.StatusOK, w.Code)
+				assert.Empty(t, w.Header().Get("Location"))
 				assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
 				assert.Contains(t, w.Body.String(), "Token Life Docs")
 			})
@@ -731,21 +733,21 @@ func TestServeEmbeddedFrontend(t *testing.T) {
 
 func TestResolveStaticPath(t *testing.T) {
 	existing := map[string]bool{
-		"docs/index.html":               true,
-		"docs/en/index.html":            true,
-		"docs/quick-start/index.html":   true,
-		"assets/app.css":                true,
+		"docs/index.html":             true,
+		"docs/en/index.html":          true,
+		"docs/quick-start/index.html": true,
+		"assets/app.css":              true,
 	}
 	exists := func(path string) bool { return existing[path] }
 
 	tests := map[string]string{
-		"docs":                  "docs/index.html",
-		"docs/":                 "docs/index.html",
-		"docs/en":               "docs/en/index.html",
-		"docs/en/":              "docs/en/index.html",
-		"docs/quick-start":      "docs/quick-start/index.html",
-		"docs/quick-start/":     "docs/quick-start/index.html",
-		"assets/app.css":        "assets/app.css",
+		"docs":              "docs/index.html",
+		"docs/":             "docs/index.html",
+		"docs/en":           "docs/en/index.html",
+		"docs/en/":          "docs/en/index.html",
+		"docs/quick-start":  "docs/quick-start/index.html",
+		"docs/quick-start/": "docs/quick-start/index.html",
+		"assets/app.css":    "assets/app.css",
 	}
 
 	for input, expected := range tests {

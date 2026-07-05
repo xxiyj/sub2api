@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/fs"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -110,10 +111,7 @@ func (s *FrontendServer) Middleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Request.URL.Path = "/" + resolvedPath
-		// Serve static files normally
-		s.fileServer.ServeHTTP(c.Writer, c.Request)
-		c.Abort()
+		serveStaticFSFile(c, s.distFS, resolvedPath)
 	}
 }
 
@@ -176,9 +174,7 @@ func (s *FrontendServer) tryServeOverride(c *gin.Context, cleanPath string) bool
 	if err != nil || info.IsDir() {
 		return false
 	}
-	c.File(filePath)
-	c.Abort()
-	return true
+	return serveLocalStaticFile(c, filePath, cleanPath)
 }
 
 func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
@@ -292,7 +288,6 @@ func ServeEmbeddedFrontend() gin.HandlerFunc {
 	if err != nil {
 		panic("failed to get dist subdirectory: " + err.Error())
 	}
-	fileServer := http.FileServer(http.FS(distFS))
 	overrideDir := filepath.Join("data", "public")
 
 	return func(c *gin.Context) {
@@ -320,9 +315,7 @@ func ServeEmbeddedFrontend() gin.HandlerFunc {
 			if tryServeOverrideFile(c, overrideDir, resolvedPath) {
 				return
 			}
-			c.Request.URL.Path = "/" + resolvedPath
-			fileServer.ServeHTTP(c.Writer, c.Request)
-			c.Abort()
+			serveStaticFSFile(c, distFS, resolvedPath)
 			return
 		}
 
@@ -340,9 +333,55 @@ func tryServeOverrideFile(c *gin.Context, overrideDir, cleanPath string) bool {
 	if err != nil || info.IsDir() {
 		return false
 	}
-	c.File(filePath)
+	return serveLocalStaticFile(c, filePath, cleanPath)
+}
+
+func serveLocalStaticFile(c *gin.Context, filePath, cleanPath string) bool {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return false
+	}
+
+	contentType := mime.TypeByExtension(filepath.Ext(cleanPath))
+	if contentType == "" {
+		contentType = http.DetectContentType(content)
+	}
+
+	c.Data(http.StatusOK, contentType, content)
 	c.Abort()
 	return true
+}
+
+func serveStaticFSFile(c *gin.Context, fsys fs.FS, cleanPath string) {
+	file, err := fsys.Open(cleanPath)
+	if err != nil {
+		c.String(http.StatusNotFound, "Static file not found")
+		c.Abort()
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	info, err := file.Stat()
+	if err != nil || info.IsDir() {
+		c.String(http.StatusNotFound, "Static file not found")
+		c.Abort()
+		return
+	}
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to read static file")
+		c.Abort()
+		return
+	}
+
+	contentType := mime.TypeByExtension(filepath.Ext(cleanPath))
+	if contentType == "" {
+		contentType = http.DetectContentType(content)
+	}
+
+	c.Data(http.StatusOK, contentType, content)
+	c.Abort()
 }
 
 func shouldBypassEmbeddedFrontend(path string) bool {
