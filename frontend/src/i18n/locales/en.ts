@@ -1130,6 +1130,11 @@ export default {
     empty: {
       title: 'No channels available',
       description: 'No monitored channels have been configured yet.'
+    },
+    providerGroups: {
+      anthropic: 'Anthropic',
+      openai: 'OpenAI',
+      other: 'Other'
     }
   },
 

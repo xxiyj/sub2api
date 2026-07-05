@@ -11,13 +11,45 @@
     />
 
     <MonitorCardGrid
-      :items="items"
+      v-if="loading && items.length === 0 || groupedMonitorSections.length === 0"
+      :items="[]"
       :window="currentWindow"
       :countdown-seconds="countdown"
       :loading="loading"
       :detail-cache="detailCache"
       @card-click="openDetail"
     />
+
+    <div v-else class="space-y-8">
+      <section
+        v-for="section in groupedMonitorSections"
+        :key="section.key"
+        class="space-y-3"
+      >
+        <div class="flex items-center gap-3">
+          <span
+            class="h-2.5 w-2.5 rounded-full"
+            :class="section.dotClass"
+          ></span>
+          <h2 class="text-sm font-bold uppercase tracking-[0.16em] text-gray-600 dark:text-gray-300">
+            {{ section.label }}
+          </h2>
+          <span class="h-px flex-1 bg-gray-200/80 dark:bg-dark-700/70"></span>
+          <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">
+            {{ section.items.length }}
+          </span>
+        </div>
+
+        <MonitorCardGrid
+          :items="section.items"
+          :window="currentWindow"
+          :countdown-seconds="countdown"
+          :loading="loading"
+          :detail-cache="detailCache"
+          @card-click="openDetail"
+        />
+      </section>
+    </div>
 
     <MonitorDetailDialog
       :show="showDetail"
@@ -84,6 +116,66 @@ const overallStatus = computed<OverallStatus>(() => {
 const detailTitle = computed(() => {
   return detailTarget.value?.name || t('channelStatus.detailTitle')
 })
+
+type MonitorProviderGroup = 'anthropic' | 'openai' | 'other'
+
+interface MonitorSection {
+  key: MonitorProviderGroup
+  label: string
+  dotClass: string
+  items: UserMonitorView[]
+}
+
+const groupOrder: MonitorProviderGroup[] = ['anthropic', 'openai', 'other']
+
+const groupDotClass: Record<MonitorProviderGroup, string> = {
+  anthropic: 'bg-orange-500 shadow-sm shadow-orange-500/30',
+  openai: 'bg-emerald-500 shadow-sm shadow-emerald-500/30',
+  other: 'bg-sky-500 shadow-sm shadow-sky-500/30',
+}
+
+const groupedMonitorSections = computed<MonitorSection[]>(() => {
+  const buckets: Record<MonitorProviderGroup, UserMonitorView[]> = {
+    anthropic: [],
+    openai: [],
+    other: [],
+  }
+
+  for (const item of items.value) {
+    buckets[resolveProviderGroup(item)].push(item)
+  }
+
+  return groupOrder
+    .map(key => ({
+      key,
+      label: t(`channelStatus.providerGroups.${key}`),
+      dotClass: groupDotClass[key],
+      items: sortByNameMultiplier(buckets[key]),
+    }))
+    .filter(section => section.items.length > 0)
+})
+
+function resolveProviderGroup(item: UserMonitorView): MonitorProviderGroup {
+  const provider = String(item.provider || '').trim().toLowerCase()
+  const text = `${provider} ${item.name || ''} ${item.primary_model || ''}`.toLowerCase()
+  if (text.includes('anthropic') || text.includes('claude')) return 'anthropic'
+  if (text.includes('openai') || text.includes('open ai') || text.includes('gpt')) return 'openai'
+  return 'other'
+}
+
+function extractNameMultiplier(name: string): number {
+  const match = String(name || '').match(/(\d+(?:\.\d+)?)\s*x\b/i)
+  return match ? Number.parseFloat(match[1]) : Number.POSITIVE_INFINITY
+}
+
+function sortByNameMultiplier(list: UserMonitorView[]): UserMonitorView[] {
+  return [...list].sort((a, b) => {
+    const multiplierA = extractNameMultiplier(a.name)
+    const multiplierB = extractNameMultiplier(b.name)
+    if (multiplierA !== multiplierB) return multiplierA - multiplierB
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+  })
+}
 
 // ── Loaders ──
 async function reload(silent = false) {
