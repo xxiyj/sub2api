@@ -99,6 +99,31 @@ func TestFetchLatestReleaseUsesCustomReleaseTagsOnly(t *testing.T) {
 	require.Equal(t, "custom release", info.ReleaseInfo.Name)
 }
 
+func TestFetchLatestReleasePrefersGitHubLatestCustomRelease(t *testing.T) {
+	svc := NewUpdateService(
+		&updateServiceCacheStub{},
+		&updateServiceGitHubClientStub{
+			release: &GitHubRelease{
+				TagName: "custom-v0.1.144-13",
+				Name:    "latest custom release",
+			},
+			releases: []GitHubRelease{
+				{TagName: "custom-v0.1.144-9", Name: "first listed custom release"},
+				{TagName: "custom-v0.1.144-13", Name: "latest custom release"},
+			},
+		},
+		"0.1.144-9",
+		"release",
+	)
+
+	info, err := svc.CheckUpdate(context.Background(), true)
+
+	require.NoError(t, err)
+	require.Equal(t, "0.1.144-13", info.LatestVersion)
+	require.True(t, info.HasUpdate)
+	require.Equal(t, "latest custom release", info.ReleaseInfo.Name)
+}
+
 func TestMatchingUpdateAssetSupportsCustomBinaryNames(t *testing.T) {
 	require.True(t, isMatchingUpdateAsset("sub2api-linux-amd64", []string{"sub2api-linux-amd64", "linux_amd64"}))
 	require.True(t, isMatchingUpdateAsset("sub2api_linux_amd64.tar.gz", []string{"sub2api-linux-amd64", "linux_amd64"}))

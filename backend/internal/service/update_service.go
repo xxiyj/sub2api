@@ -320,20 +320,38 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 }
 
 func (s *UpdateService) fetchLatestCustomRelease(ctx context.Context) (*GitHubRelease, error) {
-	releases, err := s.githubClient.FetchReleases(ctx, getUpdateGitHubRepo(), 30)
+	repo := getUpdateGitHubRepo()
+	if release, err := s.githubClient.FetchLatestRelease(ctx, repo); err == nil && isCustomRelease(release) {
+		return release, nil
+	}
+
+	releases, err := s.githubClient.FetchReleases(ctx, repo, 30)
 	if err != nil {
 		return nil, err
 	}
 
+	var latest *GitHubRelease
 	for i := range releases {
 		release := releases[i]
-		if release.Draft || !strings.HasPrefix(release.TagName, customReleaseTagPrefix) {
+		if !isCustomRelease(&release) {
 			continue
 		}
-		return &release, nil
+		if latest == nil || compareVersions(normalizeReleaseVersion(latest.TagName), normalizeReleaseVersion(release.TagName)) < 0 {
+			latest = &releases[i]
+		}
+	}
+
+	if latest != nil {
+		return latest, nil
 	}
 
 	return nil, fmt.Errorf("no custom release found with tag prefix %q", customReleaseTagPrefix)
+}
+
+func isCustomRelease(release *GitHubRelease) bool {
+	return release != nil &&
+		!release.Draft &&
+		strings.HasPrefix(release.TagName, customReleaseTagPrefix)
 }
 
 func (s *UpdateService) downloadFile(ctx context.Context, downloadURL, dest string) error {
