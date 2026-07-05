@@ -20,6 +20,10 @@
         </router-link>
 
         <div class="tl-actions">
+          <a class="tl-docs" :href="docsUrl" target="_blank" rel="noopener noreferrer">
+            {{ copy.docs }}
+          </a>
+
           <div class="tl-lang" role="group" :aria-label="copy.language">
             <button
               type="button"
@@ -202,12 +206,14 @@ const currentYear = computed(() => new Date().getFullYear())
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isAdmin = computed(() => authStore.isAdmin)
 const dashboardPath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))
+const docsUrl = computed(() => appStore.docUrl?.trim() || '/docs/index.html')
 
 const copyMap = {
   zh: {
     language: '语言切换',
     login: '登录',
     console: '控制台',
+    docs: '文档',
     openConsole: '进入控制台',
     getStarted: '开始使用',
     themeDark: '切换为深色',
@@ -249,6 +255,7 @@ const copyMap = {
     language: 'Language switcher',
     login: 'Login',
     console: 'Console',
+    docs: 'Docs',
     openConsole: 'Open Console',
     getStarted: 'Get Started',
     themeDark: 'Switch to dark',
@@ -507,6 +514,22 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 750;
   text-decoration: none;
+}
+
+.tl-docs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid rgba(111, 140, 181, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 760;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(52, 80, 122, 0.08);
 }
 
 .tl-hero {
@@ -1065,6 +1088,7 @@ onMounted(() => {
 }
 
 .tl-home-dark .tl-lang,
+.tl-home-dark .tl-docs,
 .tl-home-dark .tl-icon-button,
 .tl-home-dark .tl-panel,
 .tl-home-dark .tl-stats,
@@ -1084,6 +1108,7 @@ onMounted(() => {
 }
 
 .tl-home-dark .tl-lang button,
+.tl-home-dark .tl-docs,
 .tl-home-dark .tl-icon-button {
   color: #a8b5c7;
 }

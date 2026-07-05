@@ -1,6 +1,15 @@
 <template>
   <div class="template-page-bg relative flex min-h-screen items-center justify-center overflow-hidden p-4">
     <div class="absolute right-6 top-6 z-20 flex items-center gap-2">
+      <a
+        :href="docsUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="auth-doc-link"
+      >
+        <Icon name="book" size="sm" />
+        <span>{{ authCopy.docs }}</span>
+      </a>
       <div class="auth-language-switcher" role="group" :aria-label="authCopy.languageSwitcher">
         <button
           type="button"
@@ -145,6 +154,7 @@ const siteSubtitle = computed(() => {
     : 'API Token Platform'
 })
 const siteDomain = 'token-life.com'
+const docsUrl = computed(() => appStore.docUrl?.trim() || '/docs/index.html')
 
 const currentYear = computed(() => new Date().getFullYear())
 const isDark = ref(document.documentElement.classList.contains('dark'))
@@ -176,6 +186,7 @@ const copy = {
     fastAccessText: '兼容 Base URL',
     visibleUsage: '可见用量',
     visibleUsageText: '记录消耗明细',
+    docs: '文档',
     languageSwitcher: '语言切换',
     darkMode: '切换为深色',
     lightMode: '切换为浅色'
@@ -205,6 +216,7 @@ const copy = {
     fastAccessText: 'Compatible Base URL',
     visibleUsage: 'Visible usage',
     visibleUsageText: 'Track usage details',
+    docs: 'Docs',
     languageSwitcher: 'Language switcher',
     darkMode: 'Switch to dark',
     lightMode: 'Switch to light'
@@ -273,6 +285,23 @@ onMounted(() => {
   border: 1px solid rgba(111, 140, 181, 0.25);
   background: rgba(255, 255, 255, 0.85);
   color: #64748b;
+  box-shadow: 0 8px 24px rgba(52, 80, 122, 0.1);
+}
+
+.auth-doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 2.25rem;
+  padding: 0 0.9rem;
+  border: 1px solid rgba(111, 140, 181, 0.25);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
   box-shadow: 0 8px 24px rgba(52, 80, 122, 0.1);
 }
 
@@ -450,6 +479,16 @@ onMounted(() => {
 .auth-feature-grid > div {
   min-width: 0;
   padding: 0 1rem;
+}
+
+:global(.dark) .auth-doc-link {
+  border-color: rgba(125, 211, 252, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+  color: #a8b5c7;
+}
+
+:global(.dark) .auth-doc-link:hover {
+  color: #f8fbff;
 }
 
 </style>
