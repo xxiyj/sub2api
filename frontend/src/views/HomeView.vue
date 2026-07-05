@@ -206,7 +206,7 @@ const currentYear = computed(() => new Date().getFullYear())
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isAdmin = computed(() => authStore.isAdmin)
 const dashboardPath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))
-const docsUrl = computed(() => appStore.docUrl?.trim() || '/docs.html')
+const docsUrl = computed(() => appStore.docUrl?.trim() || '/docs/index.html')
 
 const copyMap = {
   zh: {

@@ -154,7 +154,7 @@ const siteSubtitle = computed(() => {
     : 'API Token Platform'
 })
 const siteDomain = 'token-life.com'
-const docsUrl = computed(() => appStore.docUrl?.trim() || '/docs.html')
+const docsUrl = computed(() => appStore.docUrl?.trim() || '/docs/index.html')
 
 const currentYear = computed(() => new Date().getFullYear())
 const isDark = ref(document.documentElement.classList.contains('dark'))

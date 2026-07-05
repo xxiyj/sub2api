@@ -54,8 +54,8 @@ export const useAppStore = defineStore('app', () => {
 
   function normalizeDocUrl(url: string): string {
     const trimmed = url.trim()
-    if (!trimmed || trimmed === '/docs/index.html' || trimmed === '/docs/' || trimmed === '/docs') {
-      return '/docs.html'
+    if (!trimmed || trimmed === '/docs.html' || trimmed === '/docs/' || trimmed === '/docs') {
+      return '/docs/index.html'
     }
     return trimmed
   }
@@ -305,7 +305,7 @@ export const useAppStore = defineStore('app', () => {
     siteVersion.value = config.version || ''
     contactInfo.value = config.contact_info || ''
     apiBaseUrl.value = config.api_base_url || ''
-    docUrl.value = normalizeDocUrl(config.doc_url || '/docs.html')
+    docUrl.value = normalizeDocUrl(config.doc_url || '/docs/index.html')
     publicSettingsLoaded.value = true
   }
 
@@ -340,7 +340,7 @@ export const useAppStore = defineStore('app', () => {
         site_subtitle: '',
         api_base_url: apiBaseUrl.value,
         contact_info: contactInfo.value,
-        doc_url: normalizeDocUrl(docUrl.value || '/docs.html'),
+        doc_url: normalizeDocUrl(docUrl.value || '/docs/index.html'),
         home_content: '',
         hide_ccs_import_button: false,
         payment_enabled: false,
