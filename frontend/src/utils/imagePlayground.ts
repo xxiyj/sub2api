@@ -1,6 +1,7 @@
 export const IMAGE_PLAYGROUND_STORAGE_KEY = 'sub2api_image_playground_settings'
 export const IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY = 'sub2api_image_playground_history'
 export const IMAGE_PLAYGROUND_HISTORY_LIMIT = 20
+export const IMAGE_PLAYGROUND_FIXED_COUNT = 1
 export const IMAGE_PLAYGROUND_BLOB_DB_NAME = 'sub2api_image_playground'
 export const IMAGE_PLAYGROUND_BLOB_STORE_NAME = 'generated_images'
 export const IMAGE_PLAYGROUND_BLOB_URL_PREFIX = 'indexeddb:'
@@ -235,7 +236,7 @@ export function buildImageGenerationRequest(input: ImageGenerationInput): Record
     size,
     quality: input.quality,
     output_format: input.format,
-    n: normalizeCount(input.count),
+    n: IMAGE_PLAYGROUND_FIXED_COUNT,
   }
 
   if (input.imageDataUrls.length > 0) {
@@ -476,6 +477,30 @@ export function appendImageGenerationFormData(formData: FormData, input: ImageGe
 
 export function extractImageFilesFromClipboard(event: Pick<ClipboardEvent, 'clipboardData'>): File[] {
   return Array.from(event.clipboardData?.files || []).filter((file) => file.type.startsWith('image/'))
+}
+
+export function parseImagePlaygroundErrorBody(
+  status: number,
+  text: string,
+  messages: { timeout: string, html: string, http: string },
+): string {
+  if (!text.trim()) {
+    return messages.http.replace('{status}', String(status))
+  }
+
+  try {
+    const data = JSON.parse(text) as { error?: { message?: string }, message?: string, detail?: string }
+    return data.error?.message || data.message || data.detail || messages.http.replace('{status}', String(status))
+  } catch {
+    const normalized = text.toLowerCase()
+    if (status === 524 || normalized.includes('524: a timeout occurred') || normalized.includes('error code 524')) {
+      return messages.timeout
+    }
+    if (normalized.includes('<!doctype html') || normalized.includes('<html')) {
+      return messages.html
+    }
+    return text
+  }
 }
 
 export function extractGeneratedImages(response: unknown): GeneratedImage[] {

@@ -78,10 +78,6 @@
               <label class="input-label">{{ t('imagePlayground.format') }}</label>
               <Select v-model="format" :options="formatOptions" :disabled="generating" />
             </div>
-            <div class="space-y-1.5">
-              <label class="input-label">{{ t('imagePlayground.count') }}</label>
-              <Select v-model="count" :options="countOptions" :disabled="generating" />
-            </div>
           </div>
 
           <div class="space-y-3">
@@ -262,7 +258,7 @@ import TextArea from '@/components/common/TextArea.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { buildGatewayUrl } from '@/api/client'
 import {
-  IMAGE_PLAYGROUND_COUNT_OPTIONS,
+  IMAGE_PLAYGROUND_FIXED_COUNT,
   IMAGE_PLAYGROUND_FORMAT_OPTIONS,
   IMAGE_PLAYGROUND_MODELS,
   IMAGE_PLAYGROUND_QUALITY_OPTIONS,
@@ -277,6 +273,7 @@ import {
   hydrateImagePlaygroundHistory,
   loadImagePlaygroundHistory,
   loadImagePlaygroundSettings,
+  parseImagePlaygroundErrorBody,
   prepareImagePlaygroundHistoryRecordImages,
   prependImagePlaygroundHistoryRecord,
   resolveImagePlaygroundSize,
@@ -308,7 +305,6 @@ const ratio = ref<ImagePlaygroundRatio>('1:1')
 const size = ref('1024x1024')
 const quality = ref<ImagePlaygroundQuality>('medium')
 const format = ref<ImagePlaygroundFormat>('png')
-const count = ref(1)
 const generating = ref(false)
 const elapsedSeconds = ref(0)
 const errorMessage = ref('')
@@ -332,10 +328,6 @@ const qualityOptions = computed(() => IMAGE_PLAYGROUND_QUALITY_OPTIONS.map((opti
   label: t(`imagePlayground.qualityOptions.${option.value}`),
 })))
 const formatOptions = computed(() => IMAGE_PLAYGROUND_FORMAT_OPTIONS.map((option) => ({ ...option })))
-const countOptions = computed(() => IMAGE_PLAYGROUND_COUNT_OPTIONS.map((option) => ({
-  ...option,
-  label: t('imagePlayground.countOption', { count: option.value }),
-})))
 const sizeValidation = computed(() => validateImagePlaygroundSize(size.value))
 const sizeErrorMessage = computed(() => {
   if (sizeValidation.value.valid) return ''
@@ -353,7 +345,6 @@ onMounted(() => {
   size.value = settings.size
   quality.value = settings.quality
   format.value = settings.format
-  count.value = settings.count
   void loadHistoryRecords()
 })
 
@@ -376,7 +367,7 @@ function persistSettings() {
     size: size.value,
     quality: quality.value,
     format: format.value,
-    count: count.value,
+    count: IMAGE_PLAYGROUND_FIXED_COUNT,
   })
 }
 
@@ -481,7 +472,7 @@ function createHistoryRecord(images: GeneratedImage[], usedInputImages: boolean)
     size: size.value.trim().toLowerCase(),
     quality: quality.value,
     format: format.value,
-    count: count.value,
+    count: IMAGE_PLAYGROUND_FIXED_COUNT,
     usedInputImages,
     images,
   }
@@ -499,13 +490,11 @@ async function saveSuccessfulGenerationToHistory(images: GeneratedImage[], usedI
 
 async function parseError(response: Response): Promise<string> {
   const text = await response.text()
-  if (!text) return `HTTP ${response.status}`
-  try {
-    const data = JSON.parse(text) as { error?: { message?: string }, message?: string, detail?: string }
-    return data.error?.message || data.message || data.detail || text
-  } catch {
-    return text
-  }
+  return parseImagePlaygroundErrorBody(response.status, text, {
+    timeout: t('imagePlayground.errors.timeout'),
+    html: t('imagePlayground.errors.html'),
+    http: t('imagePlayground.errors.http', { status: response.status }),
+  })
 }
 
 async function generateImage() {
@@ -524,7 +513,7 @@ async function generateImage() {
       size: size.value.trim().toLowerCase(),
       quality: quality.value,
       format: format.value,
-      count: count.value,
+      count: IMAGE_PLAYGROUND_FIXED_COUNT,
       prompt: prompt.value,
       imageDataUrls: inputImages.value.map((image) => image.previewUrl),
     }

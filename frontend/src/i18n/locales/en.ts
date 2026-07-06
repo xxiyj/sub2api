@@ -1219,6 +1219,11 @@ export default {
     clearHistory: 'Clear history',
     usedInputImages: 'With references',
     historySaveFailed: 'The image was generated, but local history could not be saved. Clear history and try again.',
+    errors: {
+      timeout: 'Image generation timed out (Cloudflare 524). Please try again later, or lower the resolution, size, or image count. If this repeats, check the upstream channel timeout.',
+      html: 'The service returned an HTML error page, so image generation could not complete. Please try again later or check the upstream channel status.',
+      http: 'Image generation failed: HTTP {status}'
+    },
     resolutionOptions: {
       '1K': '1K',
       '2K': '2K',

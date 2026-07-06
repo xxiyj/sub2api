@@ -1223,6 +1223,11 @@ export default {
     clearHistory: '清空历史',
     usedInputImages: '含参考图',
     historySaveFailed: '图片已生成，但本地历史保存失败，请清空历史后再试。',
+    errors: {
+      timeout: '图片生成请求超时（Cloudflare 524）。请稍后重试，或降低清晰度、尺寸、张数；如果多次出现，请检查上游渠道是否超时。',
+      html: '服务返回了 HTML 错误页面，未能完成图片生成。请稍后重试或检查上游渠道状态。',
+      http: '图片生成失败：HTTP {status}'
+    },
     resolutionOptions: {
       '1K': '1K',
       '2K': '2K',

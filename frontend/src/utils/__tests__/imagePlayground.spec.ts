@@ -10,6 +10,7 @@ import {
   hydrateImagePlaygroundHistory,
   prependImagePlaygroundHistoryRecord,
   prepareImagePlaygroundHistoryRecordImages,
+  parseImagePlaygroundErrorBody,
   resolveImagePlaygroundSize,
   saveImagePlaygroundHistory,
   saveImagePlaygroundSettings,
@@ -37,7 +38,7 @@ describe('imagePlayground utilities', () => {
       size: '1536x1024',
       quality: 'medium',
       output_format: 'jpeg',
-      n: 4,
+      n: 1,
     })
   })
 
@@ -60,7 +61,7 @@ describe('imagePlayground utilities', () => {
       size: '1024x1024',
       quality: 'high',
       output_format: 'png',
-      n: 2,
+      n: 1,
       image: ['data:image/png;base64,abc'],
     })
   })
@@ -75,6 +76,26 @@ describe('imagePlayground utilities', () => {
       { url: 'data:image/png;base64,Zm9v', mimeType: 'image/png' },
       { url: 'https://example.com/image.jpg', mimeType: undefined },
     ])
+  })
+
+  it('parses JSON image generation errors without exposing raw response wrappers', () => {
+    expect(parseImagePlaygroundErrorBody(400, JSON.stringify({
+      error: { message: 'Invalid size' },
+    }), {
+      timeout: 'timeout',
+      html: 'html',
+      http: 'http {status}',
+    })).toBe('Invalid size')
+  })
+
+  it('returns a friendly timeout message for Cloudflare 524 HTML pages', () => {
+    const html = '<!DOCTYPE html><html><head><title>token-life.com | 524: A timeout occurred</title></head><body>Error code 524</body></html>'
+
+    expect(parseImagePlaygroundErrorBody(524, html, {
+      timeout: '图片生成请求超时，请稍后重试或降低清晰度。',
+      html: '服务返回了 HTML 错误页面，请稍后重试。',
+      http: 'HTTP {status}',
+    })).toBe('图片生成请求超时，请稍后重试或降低清晰度。')
   })
 
   it('extracts only image files from clipboard data', () => {
