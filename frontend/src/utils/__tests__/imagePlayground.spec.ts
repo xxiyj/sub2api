@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   buildImageGenerationRequest,
   extractGeneratedImages,
+  IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY,
   IMAGE_PLAYGROUND_STORAGE_KEY,
   loadImagePlaygroundSettings,
+  loadImagePlaygroundHistory,
+  resolveImagePlaygroundSize,
+  saveImagePlaygroundHistory,
   saveImagePlaygroundSettings,
+  validateImagePlaygroundSize,
 } from '../imagePlayground'
 
 describe('imagePlayground utilities', () => {
@@ -12,7 +17,9 @@ describe('imagePlayground utilities', () => {
     const request = buildImageGenerationRequest({
       model: 'gpt-image-2',
       prompt: 'A glass teapot on a walnut table',
+      resolution: '1K',
       ratio: '3:2',
+      size: '1536x1024',
       quality: 'medium',
       format: 'jpeg',
       count: 6,
@@ -33,7 +40,9 @@ describe('imagePlayground utilities', () => {
     const request = buildImageGenerationRequest({
       model: 'gpt-image-2',
       prompt: 'Turn this into a product poster',
+      resolution: '1K',
       ratio: '1:1',
+      size: '1024x1024',
       quality: 'high',
       format: 'png',
       count: 2,
@@ -69,7 +78,9 @@ describe('imagePlayground utilities', () => {
     saveImagePlaygroundSettings({
       apiKey: 'sk-user',
       model: 'gpt-image-2',
+      resolution: '2K',
       ratio: '2:3',
+      size: '1360x2048',
       quality: 'low',
       format: 'jpeg',
       count: 3,
@@ -79,10 +90,81 @@ describe('imagePlayground utilities', () => {
     expect(loadImagePlaygroundSettings()).toEqual({
       apiKey: 'sk-user',
       model: 'gpt-image-2',
+      resolution: '2K',
       ratio: '2:3',
+      size: '1360x2048',
       quality: 'low',
       format: 'jpeg',
       count: 3,
     })
+  })
+
+  it('resolves preset resolution and ratio into model size values', () => {
+    expect(resolveImagePlaygroundSize('1K', '4:3')).toBe('1024x768')
+    expect(resolveImagePlaygroundSize('1K', '3:4')).toBe('768x1024')
+    expect(resolveImagePlaygroundSize('2K', '16:9')).toBe('2048x1152')
+    expect(resolveImagePlaygroundSize('4K', '16:9')).toBe('3840x2160')
+    expect(resolveImagePlaygroundSize('4K', '9:16')).toBe('2160x3840')
+    expect(resolveImagePlaygroundSize('4K', '21:9')).toBe('3840x1648')
+    expect(resolveImagePlaygroundSize('custom', '1:1')).toBe('1024x1024')
+    expect(resolveImagePlaygroundSize('1K', 'auto')).toBe('auto')
+  })
+
+  it('validates custom model sizes before generation', () => {
+    expect(validateImagePlaygroundSize('3840x2160')).toEqual({ valid: true })
+    expect(validateImagePlaygroundSize('3841x2160')).toMatchObject({ valid: false, reason: 'max_edge' })
+    expect(validateImagePlaygroundSize('3839x2160')).toMatchObject({ valid: false, reason: 'multiple_of_16' })
+    expect(validateImagePlaygroundSize('3840x1024')).toMatchObject({ valid: false, reason: 'ratio' })
+    expect(validateImagePlaygroundSize('3840x3840')).toMatchObject({ valid: false, reason: 'total_pixels' })
+    expect(validateImagePlaygroundSize('wide')).toMatchObject({ valid: false, reason: 'format' })
+  })
+
+  it('builds requests with the selected size instead of deriving size from ratio only', () => {
+    const request = buildImageGenerationRequest({
+      model: 'gpt-image-2',
+      prompt: 'A wide cinematic banner',
+      resolution: '4K',
+      ratio: '21:9',
+      size: '3840x1648',
+      quality: 'high',
+      format: 'png',
+      count: 1,
+      imageDataUrls: [],
+    })
+
+    expect(request).toMatchObject({
+      size: '3840x1648',
+      quality: 'high',
+      output_format: 'png',
+      n: 1,
+    })
+  })
+
+  it('keeps only the most recent 20 local generation history records', () => {
+    localStorage.clear()
+
+    const records = Array.from({ length: 22 }, (_, index) => ({
+      id: `record-${index}`,
+      createdAt: `2026-07-06T00:${String(index).padStart(2, '0')}:00.000Z`,
+      prompt: `Prompt ${index}`,
+      model: 'gpt-image-2' as const,
+      resolution: '1K' as const,
+      ratio: '1:1' as const,
+      size: '1024x1024',
+      quality: 'medium' as const,
+      format: 'png' as const,
+      count: 1,
+      usedInputImages: false,
+      images: [{ url: `data:image/png;base64,${index}`, mimeType: 'image/png' }],
+    }))
+
+    saveImagePlaygroundHistory(records)
+
+    const history = loadImagePlaygroundHistory()
+    expect(history).toHaveLength(20)
+    expect(history[0].id).toBe('record-0')
+    expect(history[19].id).toBe('record-19')
+    expect(localStorage.getItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY)).toContain('record-19')
+    expect(localStorage.getItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY)).not.toContain('record-20')
   })
 })

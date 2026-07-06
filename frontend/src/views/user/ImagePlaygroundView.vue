@@ -51,8 +51,24 @@
               <Select v-model="model" :options="modelOptions" :disabled="generating" />
             </div>
             <div class="space-y-1.5">
-              <label class="input-label">{{ t('imagePlayground.ratioSize') }}</label>
-              <Select v-model="ratio" :options="sizeOptions" value-key="ratio" label-key="label" :disabled="generating" />
+              <label class="input-label">{{ t('imagePlayground.resolution') }}</label>
+              <Select v-model="resolution" :options="resolutionOptions" :disabled="generating" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="input-label">{{ t('imagePlayground.ratio') }}</label>
+              <Select v-model="ratio" :options="ratioOptions" :disabled="generating" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="input-label">{{ t('imagePlayground.size') }}</label>
+              <input
+                v-model="size"
+                class="input"
+                :disabled="generating || resolution !== 'custom'"
+                :placeholder="t('imagePlayground.sizePlaceholder')"
+              />
+              <p v-if="resolution !== 'custom'" class="input-hint">{{ t('imagePlayground.sizeAutoHint') }}</p>
+              <p v-else-if="sizeErrorMessage" class="text-xs text-red-600 dark:text-red-400">{{ sizeErrorMessage }}</p>
+              <p v-else class="input-hint">{{ t('imagePlayground.sizeCustomHint') }}</p>
             </div>
             <div class="space-y-1.5">
               <label class="input-label">{{ t('imagePlayground.quality') }}</label>
@@ -123,14 +139,23 @@
         </section>
 
         <section class="min-h-[520px] rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-dark-600 dark:bg-dark-800">
-          <div v-if="generatedImages.length" class="grid gap-4 md:grid-cols-2">
+          <div v-if="generating" class="flex h-full min-h-[480px] flex-col items-center justify-center rounded-lg border border-dashed border-primary-300 bg-primary-50/50 text-center dark:border-primary-500/40 dark:bg-primary-500/10">
+            <Icon name="refresh" size="xl" class="mb-3 animate-spin text-primary-500" />
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ t('imagePlayground.generatingWithSeconds', { seconds: elapsedSeconds }) }}</h2>
+            <p class="mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">{{ t('imagePlayground.generatingHint') }}</p>
+          </div>
+          <div v-else-if="generatedImages.length" :class="generatedImages.length === 1 ? 'grid gap-4' : 'grid gap-4 md:grid-cols-2'">
             <article
               v-for="(image, index) in generatedImages"
               :key="`${image.url}-${index}`"
               class="overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-dark-600 dark:bg-dark-900"
             >
               <button type="button" class="block w-full" @click="previewImageUrl = image.url">
-                <img :src="image.url" :alt="`${t('imagePlayground.result')} ${index + 1}`" class="max-h-[520px] w-full object-contain" />
+                <img
+                  :src="image.url"
+                  :alt="`${t('imagePlayground.result')} ${index + 1}`"
+                  :class="generatedImages.length === 1 ? 'max-h-[68vh] min-h-[460px] w-full object-contain' : 'max-h-[520px] w-full object-contain'"
+                />
               </button>
               <div class="flex items-center justify-between gap-3 border-t border-gray-200 px-3 py-2 dark:border-dark-600">
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ image.mimeType || formatLabel }}</span>
@@ -148,6 +173,65 @@
           </div>
         </section>
       </div>
+
+      <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-dark-600 dark:bg-dark-800">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('imagePlayground.historyTitle') }}</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('imagePlayground.historyHint') }}</p>
+          </div>
+          <button
+            v-if="historyRecords.length"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="generating"
+            @click="clearHistory"
+          >
+            <Icon name="trash" size="sm" />
+            {{ t('imagePlayground.clearHistory') }}
+          </button>
+        </div>
+        <div v-if="historyRecords.length" class="space-y-4">
+          <article
+            v-for="record in historyRecords"
+            :key="record.id"
+            class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-dark-600 dark:bg-dark-900"
+          >
+            <div class="mb-3 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ record.prompt }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {{ formatHistoryTime(record.createdAt) }} · {{ record.model }} · {{ record.resolution }} · {{ record.ratio }} · {{ record.size }} · {{ record.quality.toUpperCase() }} · {{ record.format.toUpperCase() }}
+                </p>
+              </div>
+              <span v-if="record.usedInputImages" class="shrink-0 rounded-full bg-primary-100 px-2 py-1 text-xs font-medium text-primary-700 dark:bg-primary-500/20 dark:text-primary-200">
+                {{ t('imagePlayground.usedInputImages') }}
+              </span>
+            </div>
+            <div :class="record.images.length === 1 ? 'grid gap-3' : 'grid grid-cols-2 gap-3 sm:grid-cols-4'">
+              <div
+                v-for="(image, index) in record.images"
+                :key="`${record.id}-${index}`"
+                class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-dark-600 dark:bg-dark-800"
+              >
+                <button type="button" class="block w-full" @click="previewImageUrl = image.url">
+                  <img :src="image.url" :alt="`${t('imagePlayground.historyImage')} ${index + 1}`" class="aspect-video w-full object-contain" />
+                </button>
+                <div class="flex items-center justify-between gap-2 border-t border-gray-200 px-2 py-1.5 dark:border-dark-600">
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ image.mimeType || record.format.toUpperCase() }}</span>
+                  <a class="btn btn-secondary btn-sm" :href="image.url" :download="`sub2api-history-${record.id}-${index + 1}.${record.format}`">
+                    <Icon name="download" size="sm" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div v-else class="rounded-lg border border-dashed border-gray-300 py-8 text-center dark:border-dark-600">
+          <Icon name="grid" size="lg" class="mx-auto mb-2 text-gray-400" />
+          <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('imagePlayground.historyEmpty') }}</p>
+        </div>
+      </section>
     </div>
 
     <Teleport to="body">
@@ -168,7 +252,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Select from '@/components/common/Select.vue'
@@ -180,17 +264,25 @@ import {
   IMAGE_PLAYGROUND_FORMAT_OPTIONS,
   IMAGE_PLAYGROUND_MODELS,
   IMAGE_PLAYGROUND_QUALITY_OPTIONS,
-  IMAGE_PLAYGROUND_SIZE_OPTIONS,
+  IMAGE_PLAYGROUND_RATIO_OPTIONS,
+  IMAGE_PLAYGROUND_RESOLUTION_OPTIONS,
   appendImageGenerationFormData,
   buildImageGenerationRequest,
+  clearImagePlaygroundHistory,
   extractGeneratedImages,
+  loadImagePlaygroundHistory,
   loadImagePlaygroundSettings,
+  prependImagePlaygroundHistoryRecord,
+  resolveImagePlaygroundSize,
   saveImagePlaygroundSettings,
+  validateImagePlaygroundSize,
   type GeneratedImage,
   type ImagePlaygroundFormat,
+  type ImagePlaygroundHistoryRecord,
   type ImagePlaygroundModel,
   type ImagePlaygroundQuality,
   type ImagePlaygroundRatio,
+  type ImagePlaygroundResolution,
 } from '@/utils/imagePlayground'
 
 interface InputImage {
@@ -205,18 +297,30 @@ const apiKey = ref('')
 const showKey = ref(false)
 const prompt = ref('')
 const model = ref<ImagePlaygroundModel>('gpt-image-2')
+const resolution = ref<ImagePlaygroundResolution>('1K')
 const ratio = ref<ImagePlaygroundRatio>('1:1')
+const size = ref('1024x1024')
 const quality = ref<ImagePlaygroundQuality>('medium')
 const format = ref<ImagePlaygroundFormat>('png')
 const count = ref(1)
 const generating = ref(false)
+const elapsedSeconds = ref(0)
 const errorMessage = ref('')
 const inputImages = ref<InputImage[]>([])
 const generatedImages = ref<GeneratedImage[]>([])
+const historyRecords = ref<ImagePlaygroundHistoryRecord[]>([])
 const previewImageUrl = ref('')
+let elapsedTimer: ReturnType<typeof setInterval> | null = null
 
 const modelOptions = computed(() => IMAGE_PLAYGROUND_MODELS.map((option) => ({ ...option })))
-const sizeOptions = computed(() => IMAGE_PLAYGROUND_SIZE_OPTIONS.map((option) => ({ ...option })))
+const resolutionOptions = computed(() => IMAGE_PLAYGROUND_RESOLUTION_OPTIONS.map((option) => ({
+  ...option,
+  label: t(`imagePlayground.resolutionOptions.${option.value}`),
+})))
+const ratioOptions = computed(() => IMAGE_PLAYGROUND_RATIO_OPTIONS.map((option) => ({
+  ...option,
+  label: option.value === 'auto' ? t('imagePlayground.ratioOptions.auto') : option.label,
+})))
 const qualityOptions = computed(() => IMAGE_PLAYGROUND_QUALITY_OPTIONS.map((option) => ({
   ...option,
   label: t(`imagePlayground.qualityOptions.${option.value}`),
@@ -226,28 +330,63 @@ const countOptions = computed(() => IMAGE_PLAYGROUND_COUNT_OPTIONS.map((option) 
   ...option,
   label: t('imagePlayground.countOption', { count: option.value }),
 })))
-const canGenerate = computed(() => apiKey.value.trim() && prompt.value.trim())
+const sizeValidation = computed(() => validateImagePlaygroundSize(size.value))
+const sizeErrorMessage = computed(() => {
+  if (sizeValidation.value.valid) return ''
+  return t(`imagePlayground.sizeErrors.${sizeValidation.value.reason}`)
+})
+const canGenerate = computed(() => apiKey.value.trim() && prompt.value.trim() && sizeValidation.value.valid)
 const formatLabel = computed(() => format.value.toUpperCase())
 
 onMounted(() => {
   const settings = loadImagePlaygroundSettings()
   apiKey.value = settings.apiKey
   model.value = settings.model
+  resolution.value = settings.resolution
   ratio.value = settings.ratio
+  size.value = settings.size
   quality.value = settings.quality
   format.value = settings.format
   count.value = settings.count
+  historyRecords.value = loadImagePlaygroundHistory()
+})
+
+onBeforeUnmount(() => {
+  stopGenerationTimer()
+})
+
+watch([resolution, ratio], () => {
+  if (resolution.value !== 'custom') {
+    size.value = resolveImagePlaygroundSize(resolution.value, ratio.value)
+  }
 })
 
 function persistSettings() {
   saveImagePlaygroundSettings({
     apiKey: apiKey.value.trim(),
     model: model.value,
+    resolution: resolution.value,
     ratio: ratio.value,
+    size: size.value,
     quality: quality.value,
     format: format.value,
     count: count.value,
   })
+}
+
+function startGenerationTimer() {
+  stopGenerationTimer()
+  elapsedSeconds.value = 0
+  elapsedTimer = setInterval(() => {
+    elapsedSeconds.value += 1
+  }, 1000)
+}
+
+function stopGenerationTimer() {
+  if (elapsedTimer) {
+    clearInterval(elapsedTimer)
+    elapsedTimer = null
+  }
 }
 
 function fileToPreview(file: File): Promise<InputImage> {
@@ -294,6 +433,42 @@ function clearInputImages() {
 function clearResults() {
   generatedImages.value = []
   errorMessage.value = ''
+  stopGenerationTimer()
+  elapsedSeconds.value = 0
+}
+
+function clearHistory() {
+  clearImagePlaygroundHistory()
+  historyRecords.value = []
+}
+
+function formatHistoryTime(value: string) {
+  return new Date(value).toLocaleString()
+}
+
+function createHistoryRecord(images: GeneratedImage[], usedInputImages: boolean): ImagePlaygroundHistoryRecord {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    createdAt: new Date().toISOString(),
+    prompt: prompt.value.trim(),
+    model: model.value,
+    resolution: resolution.value,
+    ratio: ratio.value,
+    size: size.value.trim().toLowerCase(),
+    quality: quality.value,
+    format: format.value,
+    count: count.value,
+    usedInputImages,
+    images,
+  }
+}
+
+function saveSuccessfulGenerationToHistory(images: GeneratedImage[], usedInputImages: boolean) {
+  try {
+    historyRecords.value = prependImagePlaygroundHistoryRecord(createHistoryRecord(images, usedInputImages))
+  } catch {
+    errorMessage.value = t('imagePlayground.historySaveFailed')
+  }
 }
 
 async function parseError(response: Response): Promise<string> {
@@ -311,13 +486,16 @@ async function generateImage() {
   if (!canGenerate.value || generating.value) return
   generating.value = true
   errorMessage.value = ''
+  startGenerationTimer()
   persistSettings()
 
   try {
     const input = {
       apiKey: apiKey.value.trim(),
       model: model.value,
+      resolution: resolution.value,
       ratio: ratio.value,
+      size: size.value.trim().toLowerCase(),
       quality: quality.value,
       format: format.value,
       count: count.value,
@@ -334,10 +512,12 @@ async function generateImage() {
       throw new Error(t('imagePlayground.noImagesReturned'))
     }
     generatedImages.value = images
+    saveSuccessfulGenerationToHistory(images, hasInputImages)
   } catch (error: unknown) {
     errorMessage.value = error instanceof Error ? error.message : t('common.error')
   } finally {
     generating.value = false
+    stopGenerationTimer()
   }
 }
 
