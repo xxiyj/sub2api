@@ -412,6 +412,7 @@ export default {
     groups: '分组管理',
     channels: '渠道管理',
     availableChannels: '可用渠道',
+    imagePlayground: '图片生成',
     subscriptions: '订阅管理',
     accounts: '账号管理',
     proxies: 'IP管理',
@@ -1175,6 +1176,40 @@ export default {
       intervals: '阶梯定价',
       unitPerMillion: '/ 1M token',
       unitPerRequest: '/ 次'
+    }
+  },
+
+  imagePlayground: {
+    title: '图片生成',
+    description: '使用您自己的 API Key 生成或编辑图片，Key 仅保存在当前浏览器。',
+    apiKey: 'API Key',
+    apiKeyPlaceholder: '请输入您的 Sub2API Key',
+    apiKeyHint: '保存后仅写入浏览器 localStorage，不会上传到服务器。',
+    prompt: '图片描述',
+    promptPlaceholder: '例如：一张极简风格的咖啡店海报，暖色灯光，干净排版。',
+    model: '模型',
+    ratioSize: '比例 / 尺寸',
+    quality: '质量',
+    format: '输出格式',
+    count: '输出张数',
+    countOption: '{count} 张',
+    inputImages: '参考图片',
+    uploadTitle: '上传或粘贴图片',
+    uploadHint: '支持多选图片，也可以复制图片后在此区域粘贴；最多保留 4 张。',
+    clearImages: '清空图片',
+    clearResults: '清空结果',
+    generate: '生成图片',
+    generating: '生成中...',
+    result: '生成结果',
+    download: '下载',
+    emptyTitle: '生成结果会显示在这里',
+    emptyHint: '填写图片描述、选择参数后点击生成。带参考图时会调用图片编辑端点。',
+    noImagesReturned: '接口未返回图片',
+    readFileFailed: '读取图片失败',
+    qualityOptions: {
+      low: '低',
+      medium: '中',
+      high: '高'
     }
   },
 

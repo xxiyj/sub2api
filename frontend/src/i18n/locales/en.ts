@@ -412,6 +412,7 @@ export default {
     groups: 'Groups',
     channels: 'Channels',
     availableChannels: 'Available Channels',
+    imagePlayground: 'Image Playground',
     subscriptions: 'Subscriptions',
     accounts: 'Accounts',
     proxies: 'Proxies',
@@ -1171,6 +1172,40 @@ export default {
       intervals: 'Tiered Pricing',
       unitPerMillion: '/ 1M tokens',
       unitPerRequest: '/ request'
+    }
+  },
+
+  imagePlayground: {
+    title: 'Image Playground',
+    description: 'Generate or edit images with your own API key. The key is stored only in this browser.',
+    apiKey: 'API Key',
+    apiKeyPlaceholder: 'Enter your Sub2API key',
+    apiKeyHint: 'Saved only to browser localStorage and never uploaded to the server.',
+    prompt: 'Image prompt',
+    promptPlaceholder: 'Example: a minimalist coffee shop poster with warm light and clean typography.',
+    model: 'Model',
+    ratioSize: 'Ratio / Size',
+    quality: 'Quality',
+    format: 'Output format',
+    count: 'Image count',
+    countOption: '{count} image(s)',
+    inputImages: 'Reference images',
+    uploadTitle: 'Upload or paste images',
+    uploadHint: 'Select multiple images or paste copied images here. Up to 4 are kept.',
+    clearImages: 'Clear images',
+    clearResults: 'Clear results',
+    generate: 'Generate image',
+    generating: 'Generating...',
+    result: 'Result',
+    download: 'Download',
+    emptyTitle: 'Generated images will appear here',
+    emptyHint: 'Enter a prompt, choose parameters, then generate. Reference images use the edits endpoint.',
+    noImagesReturned: 'The API did not return any images',
+    readFileFailed: 'Failed to read image',
+    qualityOptions: {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High'
     }
   },
 
