@@ -269,6 +269,31 @@ describe('imagePlayground utilities', () => {
     expect(hydrated[0].images[0].url).toBe('blob:image/png:3')
   })
 
+  it('hydrates indexeddb history images as data urls by default for image preview compatibility', async () => {
+    const memoryBlobStore: ImagePlaygroundBlobStore = {
+      get: async () => new Blob([new Uint8Array([102, 111, 111])], { type: 'image/png' }),
+      put: async () => undefined,
+      delete: async () => undefined,
+    }
+
+    const hydrated = await hydrateImagePlaygroundHistory([{
+      id: 'data-url-preview',
+      createdAt: '2026-07-06T02:30:00.000Z',
+      prompt: 'Preview me',
+      model: 'gpt-image-2',
+      resolution: '1K',
+      ratio: '1:1',
+      size: '1024x1024',
+      quality: 'medium',
+      format: 'png',
+      count: 1,
+      usedInputImages: false,
+      images: [{ url: 'indexeddb:image-playground-data-url-preview-0', mimeType: 'image/png' }],
+    }], memoryBlobStore)
+
+    expect(hydrated[0].images[0].url).toBe('data:image/png;base64,Zm9v')
+  })
+
   it('omits stale indexeddb history image references when the blob is missing', async () => {
     const memoryBlobStore: ImagePlaygroundBlobStore = {
       get: async () => null,

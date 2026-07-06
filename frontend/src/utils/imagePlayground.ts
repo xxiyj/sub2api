@@ -393,6 +393,15 @@ function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([bytes], { type: mimeType })
 }
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(blob)
+  })
+}
+
 export async function prepareImagePlaygroundHistoryRecordImages(
   record: ImagePlaygroundHistoryRecord,
   blobStore: ImagePlaygroundBlobStore = createImagePlaygroundIndexedDBBlobStore(),
@@ -419,7 +428,7 @@ export async function prepareImagePlaygroundHistoryRecordImages(
 export async function hydrateImagePlaygroundHistory(
   records: ImagePlaygroundHistoryRecord[],
   blobStore: ImagePlaygroundBlobStore = createImagePlaygroundIndexedDBBlobStore(),
-  createObjectUrl: (blob: Blob) => string = URL.createObjectURL,
+  createDisplayUrl: (blob: Blob) => string | Promise<string> = blobToDataUrl,
 ): Promise<ImagePlaygroundHistoryRecord[]> {
   return Promise.all(records.map(async (record) => {
     const images = await Promise.all(record.images.map(async (image): Promise<GeneratedImage | null> => {
@@ -433,7 +442,7 @@ export async function hydrateImagePlaygroundHistory(
       }
       return {
         ...image,
-        url: createObjectUrl(blob),
+        url: await createDisplayUrl(blob),
         mimeType: image.mimeType || blob.type,
       }
     }))
