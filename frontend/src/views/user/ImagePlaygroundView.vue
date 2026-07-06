@@ -272,9 +272,12 @@ import {
   appendImageGenerationFormData,
   buildImageGenerationRequest,
   clearImagePlaygroundHistory,
+  deleteImagePlaygroundHistoryBlobs,
   extractGeneratedImages,
+  hydrateImagePlaygroundHistory,
   loadImagePlaygroundHistory,
   loadImagePlaygroundSettings,
+  prepareImagePlaygroundHistoryRecordImages,
   prependImagePlaygroundHistoryRecord,
   resolveImagePlaygroundSize,
   saveImagePlaygroundSettings,
@@ -351,7 +354,7 @@ onMounted(() => {
   quality.value = settings.quality
   format.value = settings.format
   count.value = settings.count
-  historyRecords.value = loadImagePlaygroundHistory()
+  void loadHistoryRecords()
 })
 
 onBeforeUnmount(() => {
@@ -440,7 +443,22 @@ function clearResults() {
   elapsedSeconds.value = 0
 }
 
-function clearHistory() {
+async function loadHistoryRecords() {
+  const records = loadImagePlaygroundHistory()
+  try {
+    historyRecords.value = await hydrateImagePlaygroundHistory(records)
+  } catch {
+    historyRecords.value = records
+  }
+}
+
+async function clearHistory() {
+  const records = loadImagePlaygroundHistory()
+  try {
+    await deleteImagePlaygroundHistoryBlobs(records)
+  } catch {
+    // Keep clearing metadata even if one stale blob cannot be removed.
+  }
   clearImagePlaygroundHistory()
   historyRecords.value = []
 }
@@ -466,9 +484,11 @@ function createHistoryRecord(images: GeneratedImage[], usedInputImages: boolean)
   }
 }
 
-function saveSuccessfulGenerationToHistory(images: GeneratedImage[], usedInputImages: boolean) {
+async function saveSuccessfulGenerationToHistory(images: GeneratedImage[], usedInputImages: boolean) {
   try {
-    historyRecords.value = prependImagePlaygroundHistoryRecord(createHistoryRecord(images, usedInputImages))
+    const preparedRecord = await prepareImagePlaygroundHistoryRecordImages(createHistoryRecord(images, usedInputImages))
+    prependImagePlaygroundHistoryRecord(preparedRecord)
+    await loadHistoryRecords()
   } catch {
     errorMessage.value = t('imagePlayground.historySaveFailed')
   }
@@ -515,7 +535,7 @@ async function generateImage() {
       throw new Error(t('imagePlayground.noImagesReturned'))
     }
     generatedImages.value = images
-    saveSuccessfulGenerationToHistory(images, hasInputImages)
+    await saveSuccessfulGenerationToHistory(images, hasInputImages)
   } catch (error: unknown) {
     errorMessage.value = error instanceof Error ? error.message : t('common.error')
   } finally {

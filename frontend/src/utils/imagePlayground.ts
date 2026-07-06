@@ -1,6 +1,9 @@
 export const IMAGE_PLAYGROUND_STORAGE_KEY = 'sub2api_image_playground_settings'
 export const IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY = 'sub2api_image_playground_history'
 export const IMAGE_PLAYGROUND_HISTORY_LIMIT = 20
+export const IMAGE_PLAYGROUND_BLOB_DB_NAME = 'sub2api_image_playground'
+export const IMAGE_PLAYGROUND_BLOB_STORE_NAME = 'generated_images'
+export const IMAGE_PLAYGROUND_BLOB_URL_PREFIX = 'indexeddb:'
 
 export const IMAGE_PLAYGROUND_MODELS = [
   { value: 'gpt-image-2', label: 'gpt-image-2' },
@@ -113,6 +116,12 @@ export interface ImagePlaygroundHistoryRecord extends Omit<ImagePlaygroundSettin
   prompt: string
   usedInputImages: boolean
   images: GeneratedImage[]
+}
+
+export interface ImagePlaygroundBlobStore {
+  get(id: string): Promise<Blob | null>
+  put(id: string, blob: Blob): Promise<void>
+  delete(id: string): Promise<void>
 }
 
 export const DEFAULT_IMAGE_PLAYGROUND_SETTINGS: ImagePlaygroundSettings = {
@@ -320,6 +329,119 @@ export function prependImagePlaygroundHistoryRecord(
 
 export function clearImagePlaygroundHistory(storage: Storage = localStorage): void {
   storage.removeItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY)
+}
+
+function openImagePlaygroundBlobDatabase(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IMAGE_PLAYGROUND_BLOB_DB_NAME, 1)
+    request.onupgradeneeded = () => {
+      const database = request.result
+      if (!database.objectStoreNames.contains(IMAGE_PLAYGROUND_BLOB_STORE_NAME)) {
+        database.createObjectStore(IMAGE_PLAYGROUND_BLOB_STORE_NAME)
+      }
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+export function createImagePlaygroundIndexedDBBlobStore(): ImagePlaygroundBlobStore {
+  async function runTransaction<T>(
+    mode: IDBTransactionMode,
+    operation: (store: IDBObjectStore) => IDBRequest<T>,
+  ): Promise<T> {
+    const database = await openImagePlaygroundBlobDatabase()
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(IMAGE_PLAYGROUND_BLOB_STORE_NAME, mode)
+      const store = transaction.objectStore(IMAGE_PLAYGROUND_BLOB_STORE_NAME)
+      const request = operation(store)
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+      transaction.oncomplete = () => database.close()
+      transaction.onerror = () => {
+        database.close()
+        reject(transaction.error)
+      }
+      transaction.onabort = () => {
+        database.close()
+        reject(transaction.error)
+      }
+    })
+  }
+
+  return {
+    get: (id: string) => runTransaction('readonly', (store) => store.get(id)),
+    put: (id: string, blob: Blob) => runTransaction('readwrite', (store) => store.put(blob, id)).then(() => undefined),
+    delete: (id: string) => runTransaction('readwrite', (store) => store.delete(id)).then(() => undefined),
+  }
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, payload = ''] = dataUrl.split(',', 2)
+  const mimeType = header.match(/^data:([^;]+);base64$/)?.[1] || 'application/octet-stream'
+  const binary = atob(payload)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index)
+  }
+  return new Blob([bytes], { type: mimeType })
+}
+
+export async function prepareImagePlaygroundHistoryRecordImages(
+  record: ImagePlaygroundHistoryRecord,
+  blobStore: ImagePlaygroundBlobStore = createImagePlaygroundIndexedDBBlobStore(),
+): Promise<ImagePlaygroundHistoryRecord> {
+  const images = await Promise.all(record.images.map(async (image, index): Promise<GeneratedImage> => {
+    if (!image.url.startsWith('data:image/')) {
+      return image
+    }
+    const blobId = `image-playground-${record.id}-${index}`
+    const blob = dataUrlToBlob(image.url)
+    await blobStore.put(blobId, blob)
+    return {
+      url: `${IMAGE_PLAYGROUND_BLOB_URL_PREFIX}${blobId}`,
+      mimeType: image.mimeType || blob.type,
+    }
+  }))
+
+  return {
+    ...record,
+    images,
+  }
+}
+
+export async function hydrateImagePlaygroundHistory(
+  records: ImagePlaygroundHistoryRecord[],
+  blobStore: ImagePlaygroundBlobStore = createImagePlaygroundIndexedDBBlobStore(),
+  createObjectUrl: (blob: Blob) => string = URL.createObjectURL,
+): Promise<ImagePlaygroundHistoryRecord[]> {
+  return Promise.all(records.map(async (record) => ({
+    ...record,
+    images: await Promise.all(record.images.map(async (image) => {
+      if (!image.url.startsWith(IMAGE_PLAYGROUND_BLOB_URL_PREFIX)) {
+        return image
+      }
+      const blobId = image.url.slice(IMAGE_PLAYGROUND_BLOB_URL_PREFIX.length)
+      const blob = await blobStore.get(blobId)
+      if (!blob) {
+        return image
+      }
+      return {
+        ...image,
+        url: createObjectUrl(blob),
+        mimeType: image.mimeType || blob.type,
+      }
+    })),
+  })))
+}
+
+export async function deleteImagePlaygroundHistoryBlobs(
+  records: ImagePlaygroundHistoryRecord[],
+  blobStore: ImagePlaygroundBlobStore = createImagePlaygroundIndexedDBBlobStore(),
+): Promise<void> {
+  await Promise.all(records.flatMap((record) => record.images
+    .filter((image) => image.url.startsWith(IMAGE_PLAYGROUND_BLOB_URL_PREFIX))
+    .map((image) => blobStore.delete(image.url.slice(IMAGE_PLAYGROUND_BLOB_URL_PREFIX.length)))))
 }
 
 export function appendImageGenerationFormData(formData: FormData, input: ImageGenerationInput, files: File[]): void {

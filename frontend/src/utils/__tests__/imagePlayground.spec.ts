@@ -6,10 +6,13 @@ import {
   IMAGE_PLAYGROUND_STORAGE_KEY,
   loadImagePlaygroundSettings,
   loadImagePlaygroundHistory,
+  hydrateImagePlaygroundHistory,
   prependImagePlaygroundHistoryRecord,
+  prepareImagePlaygroundHistoryRecordImages,
   resolveImagePlaygroundSize,
   saveImagePlaygroundHistory,
   saveImagePlaygroundSettings,
+  type ImagePlaygroundBlobStore,
   validateImagePlaygroundSize,
 } from '../imagePlayground'
 
@@ -204,5 +207,51 @@ describe('imagePlayground utilities', () => {
     expect(history[0].id).toBe('huge-image')
     expect(history[0].images).toEqual([])
     expect(loadImagePlaygroundHistory(smallQuotaStorage)[0].id).toBe('huge-image')
+  })
+
+  it('stores data url history images as blobs before writing metadata to localStorage', async () => {
+    const storedBlobs = new Map<string, Blob>()
+    const memoryBlobStore: ImagePlaygroundBlobStore = {
+      get: async (id: string) => storedBlobs.get(id) ?? null,
+      put: async (id: string, blob: Blob) => {
+        storedBlobs.set(id, blob)
+      },
+      delete: async (id: string) => {
+        storedBlobs.delete(id)
+      },
+    }
+    const backing = new Map<string, string>()
+    const storage = {
+      get length() { return backing.size },
+      clear: () => backing.clear(),
+      getItem: (key: string) => backing.get(key) ?? null,
+      key: (index: number) => Array.from(backing.keys())[index] ?? null,
+      removeItem: (key: string) => backing.delete(key),
+      setItem: (key: string, value: string) => backing.set(key, value),
+    } satisfies Storage
+
+    const prepared = await prepareImagePlaygroundHistoryRecordImages({
+      id: 'blob-record',
+      createdAt: '2026-07-06T02:00:00.000Z',
+      prompt: 'Persist me as a blob',
+      model: 'gpt-image-2',
+      resolution: '1K',
+      ratio: '1:1',
+      size: '1024x1024',
+      quality: 'medium',
+      format: 'png',
+      count: 1,
+      usedInputImages: false,
+      images: [{ url: 'data:image/png;base64,Zm9v', mimeType: 'image/png' }],
+    }, memoryBlobStore)
+
+    expect(prepared.images[0].url).toBe('indexeddb:image-playground-blob-record-0')
+    expect(storedBlobs.get('image-playground-blob-record-0')?.type).toBe('image/png')
+
+    prependImagePlaygroundHistoryRecord(prepared, storage)
+    expect(storage.getItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY)).not.toContain('Zm9v')
+
+    const hydrated = await hydrateImagePlaygroundHistory(loadImagePlaygroundHistory(storage), memoryBlobStore, (blob) => `blob:${blob.type}:${blob.size}`)
+    expect(hydrated[0].images[0].url).toBe('blob:image/png:3')
   })
 })
