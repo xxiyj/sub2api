@@ -6,6 +6,7 @@ import {
   IMAGE_PLAYGROUND_STORAGE_KEY,
   loadImagePlaygroundSettings,
   loadImagePlaygroundHistory,
+  prependImagePlaygroundHistoryRecord,
   resolveImagePlaygroundSize,
   saveImagePlaygroundHistory,
   saveImagePlaygroundSettings,
@@ -166,5 +167,42 @@ describe('imagePlayground utilities', () => {
     expect(history[19].id).toBe('record-19')
     expect(localStorage.getItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY)).toContain('record-19')
     expect(localStorage.getItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY)).not.toContain('record-20')
+  })
+
+  it('falls back to metadata-only history when generated image data exceeds localStorage quota', () => {
+    const backing = new Map<string, string>()
+    const smallQuotaStorage = {
+      get length() { return backing.size },
+      clear: () => backing.clear(),
+      getItem: (key: string) => backing.get(key) ?? null,
+      key: (index: number) => Array.from(backing.keys())[index] ?? null,
+      removeItem: (key: string) => backing.delete(key),
+      setItem: (key: string, value: string) => {
+        if (value.length > 500) {
+          throw new DOMException('Quota exceeded', 'QuotaExceededError')
+        }
+        backing.set(key, value)
+      },
+    } satisfies Storage
+
+    const history = prependImagePlaygroundHistoryRecord({
+      id: 'huge-image',
+      createdAt: '2026-07-06T01:00:00.000Z',
+      prompt: 'A very large base64 image',
+      model: 'gpt-image-2',
+      resolution: '4K',
+      ratio: '16:9',
+      size: '3840x2160',
+      quality: 'high',
+      format: 'png',
+      count: 1,
+      usedInputImages: false,
+      images: [{ url: `data:image/png;base64,${'a'.repeat(2000)}`, mimeType: 'image/png' }],
+    }, smallQuotaStorage)
+
+    expect(history).toHaveLength(1)
+    expect(history[0].id).toBe('huge-image')
+    expect(history[0].images).toEqual([])
+    expect(loadImagePlaygroundHistory(smallQuotaStorage)[0].id).toBe('huge-image')
   })
 })

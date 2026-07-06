@@ -259,7 +259,6 @@ function normalizeHistoryRecord(record: Partial<ImagePlaygroundHistoryRecord>): 
     typeof image.url === 'string' &&
     image.url.trim().length > 0
   ))
-  if (!images.length) return null
 
   return {
     id: record.id,
@@ -277,6 +276,13 @@ function normalizeHistoryRecord(record: Partial<ImagePlaygroundHistoryRecord>): 
   }
 }
 
+function compactHistoryForStorage(records: ImagePlaygroundHistoryRecord[]): ImagePlaygroundHistoryRecord[] {
+  return records.map((record) => ({
+    ...record,
+    images: record.images.filter((image) => !image.url.startsWith('data:image/')),
+  }))
+}
+
 export function loadImagePlaygroundHistory(storage: Storage = localStorage): ImagePlaygroundHistoryRecord[] {
   try {
     const raw = storage.getItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY)
@@ -292,8 +298,16 @@ export function loadImagePlaygroundHistory(storage: Storage = localStorage): Ima
   }
 }
 
-export function saveImagePlaygroundHistory(records: ImagePlaygroundHistoryRecord[], storage: Storage = localStorage): void {
-  storage.setItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY, JSON.stringify(records.slice(0, IMAGE_PLAYGROUND_HISTORY_LIMIT)))
+export function saveImagePlaygroundHistory(records: ImagePlaygroundHistoryRecord[], storage: Storage = localStorage): ImagePlaygroundHistoryRecord[] {
+  const limitedRecords = records.slice(0, IMAGE_PLAYGROUND_HISTORY_LIMIT)
+  try {
+    storage.setItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY, JSON.stringify(limitedRecords))
+    return limitedRecords
+  } catch {
+    const compactRecords = compactHistoryForStorage(limitedRecords)
+    storage.setItem(IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY, JSON.stringify(compactRecords))
+    return compactRecords
+  }
 }
 
 export function prependImagePlaygroundHistoryRecord(
@@ -301,8 +315,7 @@ export function prependImagePlaygroundHistoryRecord(
   storage: Storage = localStorage,
 ): ImagePlaygroundHistoryRecord[] {
   const next = [record, ...loadImagePlaygroundHistory(storage)].slice(0, IMAGE_PLAYGROUND_HISTORY_LIMIT)
-  saveImagePlaygroundHistory(next, storage)
-  return next
+  return saveImagePlaygroundHistory(next, storage)
 }
 
 export function clearImagePlaygroundHistory(storage: Storage = localStorage): void {

@@ -1219,6 +1219,7 @@ export default {
     historyHint: '仅保存在当前浏览器，最多保留最近 20 条。',
     historyEmpty: '暂无本地生成记录',
     historyImage: '历史图片',
+    historyImagesOmitted: '图片数据过大，未写入本地历史；本条仅保留生成参数。',
     clearHistory: '清空历史',
     usedInputImages: '含参考图',
     historySaveFailed: '图片已生成，但本地历史保存失败，请清空历史后再试。',

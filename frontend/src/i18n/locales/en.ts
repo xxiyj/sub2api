@@ -1215,6 +1215,7 @@ export default {
     historyHint: 'Stored only in this browser. Keeps the latest 20 records.',
     historyEmpty: 'No local generation history yet',
     historyImage: 'History image',
+    historyImagesOmitted: 'Image data was too large for local history; only generation parameters were saved.',
     clearHistory: 'Clear history',
     usedInputImages: 'With references',
     historySaveFailed: 'The image was generated, but local history could not be saved. Clear history and try again.',

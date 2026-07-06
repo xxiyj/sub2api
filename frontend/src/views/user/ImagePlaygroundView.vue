@@ -208,7 +208,7 @@
                 {{ t('imagePlayground.usedInputImages') }}
               </span>
             </div>
-            <div :class="record.images.length === 1 ? 'grid gap-3' : 'grid grid-cols-2 gap-3 sm:grid-cols-4'">
+            <div v-if="record.images.length" :class="record.images.length === 1 ? 'grid gap-3' : 'grid grid-cols-2 gap-3 sm:grid-cols-4'">
               <div
                 v-for="(image, index) in record.images"
                 :key="`${record.id}-${index}`"
@@ -224,6 +224,9 @@
                   </a>
                 </div>
               </div>
+            </div>
+            <div v-else class="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400">
+              {{ t('imagePlayground.historyImagesOmitted') }}
             </div>
           </article>
         </div>
