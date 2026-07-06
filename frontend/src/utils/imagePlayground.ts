@@ -355,9 +355,15 @@ export function createImagePlaygroundIndexedDBBlobStore(): ImagePlaygroundBlobSt
       const transaction = database.transaction(IMAGE_PLAYGROUND_BLOB_STORE_NAME, mode)
       const store = transaction.objectStore(IMAGE_PLAYGROUND_BLOB_STORE_NAME)
       const request = operation(store)
-      request.onsuccess = () => resolve(request.result)
+      let result: T
+      request.onsuccess = () => {
+        result = request.result
+      }
       request.onerror = () => reject(request.error)
-      transaction.oncomplete = () => database.close()
+      transaction.oncomplete = () => {
+        database.close()
+        resolve(result)
+      }
       transaction.onerror = () => {
         database.close()
         reject(transaction.error)
@@ -415,24 +421,28 @@ export async function hydrateImagePlaygroundHistory(
   blobStore: ImagePlaygroundBlobStore = createImagePlaygroundIndexedDBBlobStore(),
   createObjectUrl: (blob: Blob) => string = URL.createObjectURL,
 ): Promise<ImagePlaygroundHistoryRecord[]> {
-  return Promise.all(records.map(async (record) => ({
-    ...record,
-    images: await Promise.all(record.images.map(async (image) => {
+  return Promise.all(records.map(async (record) => {
+    const images = await Promise.all(record.images.map(async (image): Promise<GeneratedImage | null> => {
       if (!image.url.startsWith(IMAGE_PLAYGROUND_BLOB_URL_PREFIX)) {
         return image
       }
       const blobId = image.url.slice(IMAGE_PLAYGROUND_BLOB_URL_PREFIX.length)
       const blob = await blobStore.get(blobId)
       if (!blob) {
-        return image
+        return null
       }
       return {
         ...image,
         url: createObjectUrl(blob),
         mimeType: image.mimeType || blob.type,
       }
-    })),
-  })))
+    }))
+
+    return {
+      ...record,
+      images: images.filter((image): image is GeneratedImage => image !== null),
+    }
+  }))
 }
 
 export async function deleteImagePlaygroundHistoryBlobs(
@@ -453,6 +463,10 @@ export function appendImageGenerationFormData(formData: FormData, input: ImageGe
   for (const file of files) {
     formData.append('image', file, file.name || 'image.png')
   }
+}
+
+export function extractImageFilesFromClipboard(event: Pick<ClipboardEvent, 'clipboardData'>): File[] {
+  return Array.from(event.clipboardData?.files || []).filter((file) => file.type.startsWith('image/'))
 }
 
 export function extractGeneratedImages(response: unknown): GeneratedImage[] {

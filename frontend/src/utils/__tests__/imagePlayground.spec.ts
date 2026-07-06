@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildImageGenerationRequest,
+  extractImageFilesFromClipboard,
   extractGeneratedImages,
   IMAGE_PLAYGROUND_HISTORY_STORAGE_KEY,
   IMAGE_PLAYGROUND_STORAGE_KEY,
@@ -74,6 +75,19 @@ describe('imagePlayground utilities', () => {
       { url: 'data:image/png;base64,Zm9v', mimeType: 'image/png' },
       { url: 'https://example.com/image.jpg', mimeType: undefined },
     ])
+  })
+
+  it('extracts only image files from clipboard data', () => {
+    const imageFile = new File(['image'], 'reference.png', { type: 'image/png' })
+    const textFile = new File(['text'], 'note.txt', { type: 'text/plain' })
+    const clipboardEvent = {
+      clipboardData: {
+        files: [imageFile, textFile],
+      },
+    } as unknown as ClipboardEvent
+
+    expect(extractImageFilesFromClipboard(clipboardEvent)).toEqual([imageFile])
+    expect(extractImageFilesFromClipboard({ clipboardData: { files: [textFile] } } as unknown as ClipboardEvent)).toEqual([])
   })
 
   it('persists only local playground preferences and the user supplied key', () => {
@@ -253,5 +267,30 @@ describe('imagePlayground utilities', () => {
 
     const hydrated = await hydrateImagePlaygroundHistory(loadImagePlaygroundHistory(storage), memoryBlobStore, (blob) => `blob:${blob.type}:${blob.size}`)
     expect(hydrated[0].images[0].url).toBe('blob:image/png:3')
+  })
+
+  it('omits stale indexeddb history image references when the blob is missing', async () => {
+    const memoryBlobStore: ImagePlaygroundBlobStore = {
+      get: async () => null,
+      put: async () => undefined,
+      delete: async () => undefined,
+    }
+
+    const hydrated = await hydrateImagePlaygroundHistory([{
+      id: 'stale-blob',
+      createdAt: '2026-07-06T03:00:00.000Z',
+      prompt: 'A missing local image',
+      model: 'gpt-image-2',
+      resolution: '1K',
+      ratio: '1:1',
+      size: '1024x1024',
+      quality: 'medium',
+      format: 'png',
+      count: 1,
+      usedInputImages: false,
+      images: [{ url: 'indexeddb:image-playground-stale-blob-0', mimeType: 'image/png' }],
+    }], memoryBlobStore)
+
+    expect(hydrated[0].images).toEqual([])
   })
 })

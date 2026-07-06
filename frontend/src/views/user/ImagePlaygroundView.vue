@@ -1,6 +1,6 @@
 <template>
   <AppLayout>
-    <div class="mx-auto w-full max-w-7xl space-y-6">
+    <div class="mx-auto w-full max-w-7xl space-y-6" @paste="handlePaste">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ t('imagePlayground.title') }}</h1>
@@ -99,7 +99,6 @@
             </div>
             <label
               class="flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center transition hover:border-primary-400 hover:bg-primary-50/50 dark:border-dark-500 dark:bg-dark-900 dark:hover:border-primary-500 dark:hover:bg-primary-500/10"
-              @paste.prevent="handlePaste"
             >
               <input type="file" class="hidden" accept="image/*" multiple :disabled="generating" @change="handleFileInput" />
               <Icon name="upload" size="lg" class="mb-2 text-gray-400" />
@@ -208,14 +207,14 @@
                 {{ t('imagePlayground.usedInputImages') }}
               </span>
             </div>
-            <div v-if="record.images.length" :class="record.images.length === 1 ? 'grid gap-3' : 'grid grid-cols-2 gap-3 sm:grid-cols-4'">
+            <div v-if="record.images.length" class="flex flex-wrap gap-3">
               <div
                 v-for="(image, index) in record.images"
                 :key="`${record.id}-${index}`"
-                class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-dark-600 dark:bg-dark-800"
+                class="w-[150px] overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-dark-600 dark:bg-dark-800"
               >
                 <button type="button" class="block w-full" @click="previewImageUrl = image.url">
-                  <img :src="image.url" :alt="`${t('imagePlayground.historyImage')} ${index + 1}`" class="aspect-video w-full object-contain" />
+                  <img :src="image.url" :alt="`${t('imagePlayground.historyImage')} ${index + 1}`" class="h-[112px] w-full object-cover" />
                 </button>
                 <div class="flex items-center justify-between gap-2 border-t border-gray-200 px-2 py-1.5 dark:border-dark-600">
                   <span class="text-xs text-gray-500 dark:text-gray-400">{{ image.mimeType || record.format.toUpperCase() }}</span>
@@ -274,6 +273,7 @@ import {
   clearImagePlaygroundHistory,
   deleteImagePlaygroundHistoryBlobs,
   extractGeneratedImages,
+  extractImageFilesFromClipboard,
   hydrateImagePlaygroundHistory,
   loadImagePlaygroundHistory,
   loadImagePlaygroundSettings,
@@ -424,8 +424,11 @@ function handleFileInput(event: Event) {
 }
 
 function handlePaste(event: ClipboardEvent) {
-  const files = Array.from(event.clipboardData?.files || [])
-  void addFiles(files)
+  const imageFiles = extractImageFilesFromClipboard(event)
+  if (!imageFiles.length) return
+  event.preventDefault()
+  if (generating.value) return
+  void addFiles(imageFiles)
 }
 
 function removeInputImage(id: string) {
