@@ -148,11 +148,15 @@ export default {
   // Navigation
   nav: {
     dashboard: 'Dashboard',
+    groupAccess: 'Access',
+    groupConsumption: 'Consumption',
+    groupAccount: 'Account',
     announcements: 'Announcements',
     apiKeys: 'API Keys',
     batchImage: 'Batch Images',
     imagePlayground: 'Image Playground',
     usage: 'Usage',
+    rechargeCenter: 'Recharge Center',
     redeem: 'Redeem',
     affiliate: 'Affiliate Rebates',
     affiliateManagement: 'Affiliate Rebates',

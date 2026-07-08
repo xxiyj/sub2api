@@ -148,11 +148,15 @@ export default {
   // Navigation
   nav: {
     dashboard: '仪表盘',
+    groupAccess: '接入',
+    groupConsumption: '消费',
+    groupAccount: '账户',
     announcements: '公告',
     apiKeys: 'API 密钥',
     batchImage: '批量生图',
     imagePlayground: '图片生成',
     usage: '使用记录',
+    rechargeCenter: '充值中心',
     redeem: '兑换',
     affiliate: '邀请返利',
     affiliateManagement: '邀请返利',

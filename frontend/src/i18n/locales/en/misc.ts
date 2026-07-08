@@ -53,6 +53,25 @@ export default {
       'The administrator enabled the entry but has not configured a recharge/subscription URL. Please contact admin.'
   },
 
+  rechargeCenter: {
+    title: 'Recharge Center',
+    description: 'Click the button below to open the official recharge page in a new window.',
+    redeemInlineHint: 'After purchase, redeem the card code on this page to add balance.',
+    redeemPrefix: 'After purchase, use the recharge card code on the',
+    redeemLink: 'redeem page',
+    redeemSuffix: 'to add balance.',
+    infoTitle: 'Recharge information',
+    serviceName: 'Service',
+    serviceValue: 'Token Life Balance',
+    purchaseMethod: 'Method',
+    purchaseValue: 'Card code redemption',
+    exchangeRate: 'Exchange rate',
+    exchangeValue: 'CNY 1 = $1',
+    buyButton: 'Go to Recharge',
+    supportHint: 'If payment or redemption does not arrive, please contact the administrator.',
+    supportGroup: 'Support QQ group: 237078556'
+  },
+
   // Custom Page (iframe embed)
   customPage: {
     title: 'Custom Page',
