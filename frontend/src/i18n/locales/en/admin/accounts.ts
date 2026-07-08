@@ -696,6 +696,11 @@ export default {
       creating: 'Creating...',
       updating: 'Updating...',
       accountCreated: 'Account created successfully',
+      fromModel: 'Source model',
+      toModel: 'Target model',
+      messages: {
+        accountCreated: 'Account created successfully'
+      },
       accountUpdated: 'Account updated successfully',
       failedToCreate: 'Failed to create account',
       failedToUpdate: 'Failed to update account',
@@ -813,6 +818,8 @@ export default {
           },
           // Refresh Token auth
           refreshTokenAuth: 'Manual RT Input',
+          mobileRefreshTokenAuth: 'Mobile RT Input',
+          accessTokenAuth: 'Access Token Input',
           refreshTokenDesc: 'Enter your existing OpenAI Refresh Token(s). Supports batch input (one per line). The system will automatically validate and create accounts.',
           refreshTokenPlaceholder: 'Paste your OpenAI Refresh Token...\nSupports multiple, one per line',
           codexSessionAuth: 'Codex JSON / AT Batch Input',

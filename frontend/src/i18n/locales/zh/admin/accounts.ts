@@ -789,6 +789,11 @@ export default {
       creating: '创建中...',
       updating: '更新中...',
       accountCreated: '账号创建成功',
+      fromModel: '源模型',
+      toModel: '目标模型',
+      messages: {
+        accountCreated: '账号创建成功'
+      },
       accountUpdated: '账号更新成功',
       failedToCreate: '创建账号失败',
       failedToUpdate: '更新账号失败',
@@ -900,6 +905,8 @@ export default {
           },
           // Refresh Token auth
           refreshTokenAuth: '手动输入 RT',
+          mobileRefreshTokenAuth: '移动端 RT 输入',
+          accessTokenAuth: 'Access Token 输入',
           refreshTokenDesc: '输入您已有的 OpenAI Refresh Token，支持批量输入（每行一个），系统将自动验证并创建账号。',
           refreshTokenPlaceholder: '粘贴您的 OpenAI Refresh Token...\n支持多个，每行一个',
           codexSessionAuth: 'Codex JSON / AT 批量输入',

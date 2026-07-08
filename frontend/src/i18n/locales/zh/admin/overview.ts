@@ -440,6 +440,7 @@ export default {
       disabled: '禁用',
       email: '邮箱',
       password: '密码',
+      passwordCopied: '密码已复制',
       username: '用户名',
       notes: '备注',
       enterEmail: '请输入邮箱',
