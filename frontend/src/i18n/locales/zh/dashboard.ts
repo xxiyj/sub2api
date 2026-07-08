@@ -455,6 +455,11 @@ export default {
     empty: {
       title: '暂无可显示的渠道',
       description: '管理员尚未配置可监控的渠道。'
+    },
+    providerGroups: {
+      anthropic: 'Anthropic',
+      openai: 'OpenAI',
+      other: '其它'
     }
   },
 
