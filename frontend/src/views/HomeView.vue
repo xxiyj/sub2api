@@ -193,6 +193,7 @@ const siteName = computed(() => {
   return configured && !['Sub2API', 'QuotaAPI'].includes(configured) ? configured : 'Token Life'
 })
 const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
+const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || '/docs/index.html', { allowRelative: true }) || '/docs/index.html')
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
 const isHomeContentUrl = computed(() => {
   const content = homeContent.value.trim()
@@ -206,7 +207,7 @@ const currentYear = computed(() => new Date().getFullYear())
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isAdmin = computed(() => authStore.isAdmin)
 const dashboardPath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))
-const docsUrl = computed(() => appStore.docUrl?.trim() || '/docs/index.html')
+const docsUrl = computed(() => docUrl.value)
 
 const copyMap = {
   zh: {
