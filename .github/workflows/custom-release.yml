@@ -82,20 +82,24 @@ jobs:
 
           for arch in amd64 arm64; do
             echo "Building linux/${arch}"
+            binary="sub2api-linux-${arch}"
+            archive="sub2api_${{ steps.meta.outputs.version }}_linux_${arch}.tar.gz"
             (
               cd backend
               CGO_ENABLED=0 GOOS=linux GOARCH="${arch}" go build \
                 -tags embed \
                 -ldflags="-s -w -X main.Version=${{ steps.meta.outputs.version }} -X main.Commit=${{ steps.meta.outputs.commit }} -X main.Date=${{ steps.meta.outputs.date }} -X main.BuildType=release" \
                 -trimpath \
-                -o "../dist-custom/sub2api-linux-${arch}" \
+                -o "../dist-custom/${binary}" \
                 ./cmd/server
             )
+            tar -C dist-custom -czf "dist-custom/${archive}" "${binary}"
+            rm -f "dist-custom/${binary}"
           done
 
           (
             cd dist-custom
-            sha256sum sub2api-linux-amd64 sub2api-linux-arm64 > checksums.txt
+            sha256sum *.tar.gz > checksums.txt
           )
 
       - name: Publish GitHub Release
@@ -106,14 +110,12 @@ jobs:
         run: |
           if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
             gh release upload "${TAG_NAME}" \
-              dist-custom/sub2api-linux-amd64 \
-              dist-custom/sub2api-linux-arm64 \
+              dist-custom/*.tar.gz \
               dist-custom/checksums.txt \
               --clobber
           else
             gh release create "${TAG_NAME}" \
-              dist-custom/sub2api-linux-amd64 \
-              dist-custom/sub2api-linux-arm64 \
+              dist-custom/*.tar.gz \
               dist-custom/checksums.txt \
               --title "Custom Template ${TAG_NAME}" \
               --notes "Custom Sub2API template build from ${GITHUB_SHA}."

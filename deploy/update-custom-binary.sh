@@ -72,7 +72,8 @@ Environment:
 
 Notes:
   - This script does not back up PostgreSQL. Back up the database separately.
-  - Default release mode expects assets named sub2api-linux-amd64 and sub2api-linux-arm64.
+  - Default release mode prefers assets named sub2api_<version>_linux_amd64.tar.gz and sub2api_<version>_linux_arm64.tar.gz.
+  - It falls back to legacy assets named sub2api-linux-amd64 and sub2api-linux-arm64.
   - --binary-dir mode expects files named sub2api-linux-amd64 and sub2api-linux-arm64.
   - --build-from-git mode requires git, pnpm, node, and go on the server.
   - The installed service is expected at /opt/sub2api/sub2api by default.
@@ -228,6 +229,32 @@ curl_download() {
   curl "${args[@]}" "${url}" -o "${output}"
 }
 
+curl_stdout() {
+  local url="$1"
+  local -a args
+  args=(-fsSL --retry 3 --connect-timeout 15 --max-time 300)
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  fi
+  curl "${args[@]}" "${url}"
+}
+
+release_version_label() {
+  local tag="${RELEASE_VERSION}"
+
+  if [[ "${tag}" == "latest" ]]; then
+    local api_url latest_tag
+    api_url="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
+    latest_tag="$(curl_stdout "${api_url}" | sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+    [[ -n "${latest_tag}" ]] || return 1
+    tag="${latest_tag}"
+  fi
+
+  tag="${tag#custom-v}"
+  tag="${tag#v}"
+  printf '%s' "${tag}"
+}
+
 verify_checksum_if_available() {
   local download_dir="$1"
   local asset="$2"
@@ -259,20 +286,42 @@ verify_checksum_if_available() {
 download_release_binary() {
   require_command curl
 
-  local arch asset download_dir url
+  local arch asset archive legacy_asset download_dir url version
   arch="$(detect_arch)"
-  asset="sub2api-linux-${arch}"
   download_dir="/tmp/sub2api-release-${TIMESTAMP}"
-  url="$(release_asset_url "${asset}")"
-
   mkdir -p "${download_dir}"
-  NEW_BINARY="${download_dir}/${asset}"
 
   log "Detected server architecture: ${arch}"
-  log "Downloading ${GITHUB_REPO} release ${RELEASE_VERSION}: ${asset}"
+
+  if version="$(release_version_label)"; then
+    archive="sub2api_${version}_linux_${arch}.tar.gz"
+    asset="${archive}"
+    url="$(release_asset_url "${asset}")"
+
+    log "Downloading ${GITHUB_REPO} release ${RELEASE_VERSION}: ${asset}"
+    if curl_download "${url}" "${download_dir}/${archive}"; then
+      require_command tar
+      verify_checksum_if_available "${download_dir}" "${asset}"
+      tar -xzf "${download_dir}/${archive}" -C "${download_dir}"
+      NEW_BINARY="${download_dir}/sub2api-linux-${arch}"
+      [[ -f "${NEW_BINARY}" ]] || die "Archive ${archive} did not contain sub2api-linux-${arch}"
+      chmod +x "${NEW_BINARY}"
+      return 0
+    fi
+
+    log "Compressed release asset not found; falling back to legacy binary asset"
+  else
+    log "Could not resolve latest release version; falling back to legacy binary asset"
+  fi
+
+  legacy_asset="sub2api-linux-${arch}"
+  url="$(release_asset_url "${legacy_asset}")"
+  NEW_BINARY="${download_dir}/${legacy_asset}"
+
+  log "Downloading ${GITHUB_REPO} release ${RELEASE_VERSION}: ${legacy_asset}"
   curl_download "${url}" "${NEW_BINARY}"
   chmod +x "${NEW_BINARY}"
-  verify_checksum_if_available "${download_dir}" "${asset}"
+  verify_checksum_if_available "${download_dir}" "${legacy_asset}"
 }
 
 prepare_git_source() {

@@ -253,10 +253,12 @@ GitHub Actions 会运行：
 它会自动生成并上传三个 Release assets：
 
 ```text
-sub2api-linux-amd64
-sub2api-linux-arm64
+sub2api_0.1.143-1_linux_amd64.tar.gz
+sub2api_0.1.143-1_linux_arm64.tar.gz
 checksums.txt
 ```
+
+其中 `0.1.143-1` 来自 tag `custom-v0.1.143-1` 去掉 `custom-v` 前缀后的版本号。Release 页面显示的是 `.tar.gz` 压缩包大小，通常会接近官方 Release 的 30MB 左右；解压后的 Go 二进制本身会更大。
 
 如果需要重新上传同一个 tag 的 assets，可以在 GitHub Actions 页面手动运行 `Custom Template Release` workflow，并填写同一个 tag；workflow 会覆盖同名 assets。
 
@@ -271,19 +273,25 @@ cd D:\Cloud\code\AI\sub2api模板\sub2api
 powershell -ExecutionPolicy Bypass -File .\tools\build-custom-release.ps1
 ```
 
+如果要手动构建某个自定义版本号，显式传入：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\build-custom-release.ps1 -Version 0.1.143-1
+```
+
 默认输出目录：
 
 ```text
-dist-custom/sub2api-linux-amd64
-dist-custom/sub2api-linux-arm64
+dist-custom/sub2api_0.1.143-1_linux_amd64.tar.gz
+dist-custom/sub2api_0.1.143-1_linux_arm64.tar.gz
 dist-custom/checksums.txt
 ```
 
 本地构建会输出：
 
 ```text
-sub2api-linux-amd64
-sub2api-linux-arm64
+sub2api_0.1.143-1_linux_amd64.tar.gz
+sub2api_0.1.143-1_linux_arm64.tar.gz
 checksums.txt
 ```
 
@@ -316,8 +324,9 @@ curl -fsSL https://raw.githubusercontent.com/xxiyj/sub2api/my-template/deploy/up
 脚本会自动完成：
 
 - 用 `uname -m` 判断服务器架构。
-- `x86_64` 或 `amd64` 下载 `sub2api-linux-amd64`。
-- `aarch64` 或 `arm64` 下载 `sub2api-linux-arm64`。
+- `x86_64` 或 `amd64` 优先下载 `sub2api_<version>_linux_amd64.tar.gz` 并解压。
+- `aarch64` 或 `arm64` 优先下载 `sub2api_<version>_linux_arm64.tar.gz` 并解压。
+- 如果目标 Release 仍是旧格式，会自动回退下载 `sub2api-linux-amd64` 或 `sub2api-linux-arm64` 裸二进制。
 - 如果 Release 中有 `checksums.txt`，自动校验 SHA256。
 - 备份旧二进制到 `/opt/sub2api/backups/bin/`。
 - 替换 `/opt/sub2api/sub2api`。
@@ -338,8 +347,12 @@ curl -fsSL https://raw.githubusercontent.com/xxiyj/sub2api/my-template/deploy/up
 上传到服务器：
 
 ```powershell
+cd D:\Cloud\code\AI\sub2api模板\sub2api
+mkdir dist-custom\raw
+tar -C dist-custom\raw -xzf dist-custom\sub2api_0.1.143-1_linux_amd64.tar.gz
+tar -C dist-custom\raw -xzf dist-custom\sub2api_0.1.143-1_linux_arm64.tar.gz
 ssh root@your-server "mkdir -p /tmp/sub2api-release"
-scp D:\Cloud\code\AI\sub2api模板\sub2api\dist-custom\sub2api-linux-* root@your-server:/tmp/sub2api-release/
+scp D:\Cloud\code\AI\sub2api模板\sub2api\dist-custom\raw\sub2api-linux-* root@your-server:/tmp/sub2api-release/
 ```
 
 服务器执行：
