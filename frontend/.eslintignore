@@ -9,6 +9,9 @@ node_modules/
 dist/
 ../backend/internal/web/dist/
 
+# 忽略静态文档第三方资源
+public/docs/
+
 # 忽略缓存
 .cache/
 .vite/
