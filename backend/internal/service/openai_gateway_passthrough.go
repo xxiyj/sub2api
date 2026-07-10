@@ -382,6 +382,11 @@ func (s *OpenAIGatewayService) buildUpstreamRequestOpenAIPassthrough(
 		if clientConversationID != "" {
 			req.Header.Set("conversation_id", isolateOpenAISessionID(apiKeyID, clientConversationID))
 		}
+	} else if isOpenAIResponsesCompactPath(c) {
+		// 透传白名单会放行客户端的 Accept: text/event-stream；compact 上游是
+		// unary JSON 协议，API-key 账号同样强制 Accept，避免上游按 SSE 返回
+		// （#3777 期望行为 4）。
+		req.Header.Set("accept", "application/json")
 	}
 
 	// 透传模式也支持账户自定义 User-Agent 与 ForceCodexCLI 兜底。
@@ -694,8 +699,12 @@ func openAIStreamFailedEventPassthroughBody(payload []byte, failedMessage string
 	return body
 }
 
+// applyOpenAIStreamFailedErrorPassthroughRule 对 response.failed 事件应用错误透传规则：
+// 归一化 body 供关键词匹配/消息提取，并推断语义状态码使按错误码配置的规则可以命中。
+// platform 必须传 account.Platform——本服务同时承载 openai 与 grok 平台账号，规则按平台匹配。
 func applyOpenAIStreamFailedErrorPassthroughRule(
 	c *gin.Context,
+	platform string,
 	payload []byte,
 	failedMessage string,
 ) (status int, errType string, errMsg string, matched bool) {
@@ -703,7 +712,7 @@ func applyOpenAIStreamFailedErrorPassthroughRule(
 	upstreamStatus := openAIStreamFailedEventSemanticStatus(payload, failedMessage)
 	return applyErrorPassthroughRule(
 		c,
-		PlatformOpenAI,
+		platform,
 		upstreamStatus,
 		ruleBody,
 		http.StatusBadGateway,
@@ -922,7 +931,10 @@ func (s *OpenAIGatewayService) handleStreamingResponsePassthrough(
 					})
 				}
 				if !openAIStreamClientOutputStarted(c, clientOutputStarted) {
-					if status, errType, errMsg, matched := applyOpenAIStreamFailedErrorPassthroughRule(c, dataBytes, failedMessage); matched {
+					if status, errType, errMsg, matched := applyOpenAIStreamFailedErrorPassthroughRule(c, account.Platform, dataBytes, failedMessage); matched {
+						// 命中透传规则也要记录 ops 上游错误事件（对齐 CC/Messages 与
+						// antigravity 先例），否则透传命中的 failed 在监控中不可见。
+						s.recordOpenAIStreamUpstreamError(c, account, true, upstreamRequestID, "http_error", dataBytes, failedMessage)
 						MarkResponseCommitted(c)
 						c.Writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 						c.JSON(status, gin.H{
@@ -1081,7 +1093,9 @@ func (s *OpenAIGatewayService) handleNonStreamingResponsePassthrough(
 	if originalModel != "" && mappedModel != "" && originalModel != mappedModel {
 		body = s.replaceModelInResponseBody(body, mappedModel, originalModel)
 	}
-	c.Data(resp.StatusCode, contentType, body)
+	if !writeOpenAICompactSSEBridge(c, resp.StatusCode, body) {
+		c.Data(resp.StatusCode, contentType, body)
+	}
 	return &openaiNonStreamingResultPassthrough{
 		OpenAIUsage:      usage,
 		usage:            usage,
@@ -1113,6 +1127,7 @@ func (s *OpenAIGatewayService) handlePassthroughSSEToJSON(resp *http.Response, c
 				}
 			}
 		}
+		finalResponse = supplementCompactionItemFromSSE(c, finalResponse, bodyText)
 		body = finalResponse
 		if originalModel != "" && mappedModel != "" && originalModel != mappedModel {
 			body = s.replaceModelInResponseBody(body, mappedModel, originalModel)
@@ -1144,7 +1159,9 @@ func (s *OpenAIGatewayService) handlePassthroughSSEToJSON(resp *http.Response, c
 			contentType = "text/event-stream"
 		}
 	}
-	c.Data(resp.StatusCode, contentType, body)
+	if !writeOpenAICompactSSEBridge(c, resp.StatusCode, body) {
+		c.Data(resp.StatusCode, contentType, body)
+	}
 
 	return &openaiNonStreamingResultPassthrough{
 		OpenAIUsage:      usage,

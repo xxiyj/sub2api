@@ -15,7 +15,7 @@ describe('doc_url sanitization', () => {
   })
 
   it('AppHeader applies sanitizeUrl to docUrl', () => {
-    expect(headerSource).toContain('sanitizeUrl(appStore.docUrl)')
+    expect(headerSource).toMatch(/sanitizeUrl\(\s*appStore\.docUrl\b/)
   })
 
   it('HomeView imports sanitizeUrl', () => {
