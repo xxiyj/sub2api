@@ -303,8 +303,13 @@ download_release_binary() {
       require_command tar
       verify_checksum_if_available "${download_dir}" "${asset}"
       tar -xzf "${download_dir}/${archive}" -C "${download_dir}"
-      NEW_BINARY="${download_dir}/sub2api-linux-${arch}"
-      [[ -f "${NEW_BINARY}" ]] || die "Archive ${archive} did not contain sub2api-linux-${arch}"
+      if [[ -f "${download_dir}/sub2api" ]]; then
+        NEW_BINARY="${download_dir}/sub2api"
+      elif [[ -f "${download_dir}/sub2api-linux-${arch}" ]]; then
+        NEW_BINARY="${download_dir}/sub2api-linux-${arch}"
+      else
+        die "Archive ${archive} did not contain sub2api or sub2api-linux-${arch}"
+      fi
       chmod +x "${NEW_BINARY}"
       return 0
     fi

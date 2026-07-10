@@ -622,8 +622,11 @@ func (s *UpdateService) extractBinary(archivePath, destPath string) error {
 				continue // Skip directories and special files
 			}
 
-			// Only extract the specific binary we need
-			if baseName == "sub2api" || baseName == "sub2api.exe" {
+			// Only extract binary names produced by official and custom release workflows.
+			if baseName == "sub2api" ||
+				baseName == "sub2api.exe" ||
+				baseName == "sub2api-linux-amd64" ||
+				baseName == "sub2api-linux-arm64" {
 				// Additional security: limit file size (max 500MB)
 				const maxBinarySize = 500 * 1024 * 1024
 				if hdr.Size > maxBinarySize {

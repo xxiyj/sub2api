@@ -82,7 +82,7 @@ jobs:
 
           for arch in amd64 arm64; do
             echo "Building linux/${arch}"
-            binary="sub2api-linux-${arch}"
+            binary="sub2api"
             archive="sub2api_${{ steps.meta.outputs.version }}_linux_${arch}.tar.gz"
             (
               cd backend

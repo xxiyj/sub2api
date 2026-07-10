@@ -3,8 +3,12 @@
 package service
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -132,6 +136,39 @@ func TestMatchingUpdateAssetSupportsCustomBinaryNames(t *testing.T) {
 	require.True(t, isMatchingUpdateAsset("sub2api-linux-amd64", []string{"sub2api-linux-amd64", "linux_amd64"}))
 	require.True(t, isMatchingUpdateAsset("sub2api_linux_amd64.tar.gz", []string{"sub2api-linux-amd64", "linux_amd64"}))
 	require.False(t, isMatchingUpdateAsset("checksums.txt", []string{"sub2api-linux-amd64", "linux_amd64"}))
+}
+
+func TestExtractBinarySupportsCustomReleaseArchiveNames(t *testing.T) {
+	for _, binaryName := range []string{"sub2api-linux-amd64", "sub2api-linux-arm64"} {
+		t.Run(binaryName, func(t *testing.T) {
+			archivePath := filepath.Join(t.TempDir(), "release.tar.gz")
+			archive, err := os.Create(archivePath)
+			require.NoError(t, err)
+
+			gzipWriter := gzip.NewWriter(archive)
+			tarWriter := tar.NewWriter(gzipWriter)
+			binaryContent := []byte("custom release binary")
+			require.NoError(t, tarWriter.WriteHeader(&tar.Header{
+				Name:     binaryName,
+				Mode:     0o755,
+				Size:     int64(len(binaryContent)),
+				Typeflag: tar.TypeReg,
+			}))
+			_, err = tarWriter.Write(binaryContent)
+			require.NoError(t, err)
+			require.NoError(t, tarWriter.Close())
+			require.NoError(t, gzipWriter.Close())
+			require.NoError(t, archive.Close())
+
+			destination := filepath.Join(t.TempDir(), "sub2api")
+			svc := &UpdateService{}
+			require.NoError(t, svc.extractBinary(archivePath, destination))
+
+			extracted, err := os.ReadFile(destination)
+			require.NoError(t, err)
+			require.Equal(t, binaryContent, extracted)
+		})
+	}
 }
 
 func newRollbackTestService(current string, releases []*GitHubRelease) *UpdateService {

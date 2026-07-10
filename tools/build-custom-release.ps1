@@ -63,12 +63,22 @@ finally {
 
 foreach ($target in $targets) {
     $archivePath = Join-Path $ResolvedOutputDir $target.Archive
+    $packageDir = Join-Path $ResolvedOutputDir ".package-$($target.GOARCH)"
     if (Test-Path $archivePath) {
         Remove-Item $archivePath
     }
+    if (Test-Path $packageDir) {
+        Remove-Item -Recurse -Force $packageDir
+    }
+    New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+    Move-Item (Join-Path $ResolvedOutputDir $target.Binary) (Join-Path $packageDir "sub2api")
     Write-Host "[sub2api] Packaging $($target.Archive)"
-    tar -C $ResolvedOutputDir -czf $archivePath $target.Binary
-    Remove-Item (Join-Path $ResolvedOutputDir $target.Binary)
+    try {
+        tar -C $packageDir -czf $archivePath "sub2api"
+    }
+    finally {
+        Remove-Item -Recurse -Force $packageDir
+    }
 }
 
 $checksumPath = Join-Path $ResolvedOutputDir "checksums.txt"
