@@ -422,6 +422,27 @@ The custom release workflow strips the `custom-v` prefix, so the application ver
 
 Prefer the hyphen suffix form (`-1`, `-2`, etc.) over dot-only suffixes such as `0.1.143.1`, because the hyphen clearly separates the upstream version from this fork's template revision.
 
+### Custom release asset format
+
+Custom template releases must upload compressed archive assets, not raw binaries.
+
+Expected custom release assets:
+
+- `sub2api_<version>_linux_amd64.tar.gz`
+- `sub2api_<version>_linux_arm64.tar.gz`
+- `checksums.txt`
+
+The `<version>` value is the tag name after stripping `custom-v`; for example:
+
+- `custom-v0.1.147-2` -> `sub2api_0.1.147-2_linux_amd64.tar.gz`
+
+Do not upload bare assets such as `sub2api-linux-amd64` or `sub2api-linux-arm64` from new custom releases. Bare binaries are much larger on the GitHub Release page because they are uncompressed.
+
+The update script must remain backward-compatible with old custom releases that already uploaded bare binaries:
+
+- prefer downloading and extracting the `.tar.gz` asset
+- fall back to `sub2api-linux-amd64` or `sub2api-linux-arm64` only when the compressed asset is unavailable
+
 ### Practical rule for agents
 
 - ordinary commit/push: expect CI and security workflows to run
