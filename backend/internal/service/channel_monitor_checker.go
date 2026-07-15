@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -293,7 +294,54 @@ func callProvider(ctx context.Context, provider, endpoint, apiKey, model, prompt
 	if provider == MonitorProviderOpenAI && apiMode == MonitorAPIModeResponses {
 		return extractOpenAIResponsesText(respBytes), string(respBytes), status, nil
 	}
+	if provider == MonitorProviderAnthropic {
+		return extractAnthropicText(respBytes), string(respBytes), status, nil
+	}
 	return gjson.GetBytes(respBytes, adapter.textPath).String(), string(respBytes), status, nil
+}
+
+// extractAnthropicText returns assistant text from either a Messages JSON response
+// or an Anthropic SSE stream. Claude thinking blocks can precede text blocks, so
+// content.0.text is not reliable. Some compatible upstreams also stream despite
+// stream:false, while still completing the request successfully.
+func extractAnthropicText(respBytes []byte) string {
+	var texts []string
+	content := gjson.GetBytes(respBytes, "content")
+	if content.IsArray() {
+		content.ForEach(func(_, block gjson.Result) bool {
+			if block.Get("type").String() != "text" {
+				return true
+			}
+			if text := block.Get("text").String(); text != "" {
+				texts = append(texts, text)
+			}
+			return true
+		})
+		if len(texts) > 0 {
+			return strings.Join(texts, "")
+		}
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(respBytes))
+	scanner.Buffer(make([]byte, 1024), monitorResponseMaxBytes)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if !strings.HasPrefix(line, "data:") {
+			continue
+		}
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		if data == "" || data == "[DONE]" || gjson.Get(data, "type").String() != "content_block_delta" {
+			continue
+		}
+		delta := gjson.Get(data, "delta")
+		if delta.Get("type").String() != "text_delta" {
+			continue
+		}
+		if text := delta.Get("text").String(); text != "" {
+			texts = append(texts, text)
+		}
+	}
+	return strings.Join(texts, "")
 }
 
 // extractOpenAIResponsesText 聚合 Responses API 的最终 assistant 文本。

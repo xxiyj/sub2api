@@ -331,6 +331,58 @@ func TestRunCheckForModel_OpenAIResponses_SkipsLeadingReasoningItem(t *testing.T
 	}
 }
 
+func TestExtractAnthropicText_SkipsThinkingContentBlocks(t *testing.T) {
+	response := []byte(`{
+		"content": [
+			{"type": "thinking", "thinking": "I need to calculate this first."},
+			{"type": "text", "text": "26"}
+		]
+	}`)
+
+	if got := extractAnthropicText(response); got != "26" {
+		t.Fatalf("expected text after thinking block, got %q", got)
+	}
+}
+
+func TestExtractAnthropicText_AggregatesSSETextDeltas(t *testing.T) {
+	response := []byte("event: message_start\n" +
+		"data: {\"type\":\"message_start\",\"message\":{\"content\":[]}}\n\n" +
+		"event: content_block_delta\n" +
+		"data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"2\"}}\n\n" +
+		"event: content_block_delta\n" +
+		"data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"6\"}}\n\n" +
+		"event: message_stop\n" +
+		"data: {\"type\":\"message_stop\"}\n\n")
+
+	if got := extractAnthropicText(response); got != "26" {
+		t.Fatalf("expected text aggregated from SSE deltas, got %q", got)
+	}
+}
+
+func TestRunCheckForModel_AnthropicSSEChallengeResponse(t *testing.T) {
+	swapMonitorHTTPClient(t)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() { _ = r.Body.Close() }()
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode monitor request: %v", err)
+		}
+		messages, _ := body["messages"].([]any)
+		prompt := messages[0].(map[string]any)["content"].(string)
+		answer := answerFromChallengePrompt(prompt)
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("event: content_block_delta\n" +
+			"data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"" + answer + "\"}}\n\n"))
+	}))
+	defer upstream.Close()
+
+	result := runCheckForModel(context.Background(), MonitorProviderAnthropic, upstream.URL, "sk-fake", "claude-x", nil)
+	if result.Status != MonitorStatusOperational {
+		t.Fatalf("Anthropic SSE response should pass challenge, got status=%s message=%q", result.Status, result.Message)
+	}
+}
+
 func TestRunCheckForModel_OpenAIResponsesReplaceMissingInstructionsFailsLocally(t *testing.T) {
 	h := &openAICaptureHandler{}
 	endpoint := setupFakeOpenAI(t, h)
