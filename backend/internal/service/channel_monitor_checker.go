@@ -150,11 +150,11 @@ func pingEndpointOrigin(ctx context.Context, endpoint string) *int {
 	return &ms
 }
 
-// providerAdapter 描述某个 provider 在 challenge 检测中需要的 4 件事：
+// providerAdapter 描述某个 provider 在 challenge 检测中需要的几件事：
 //   - 拼出请求路径（含 model 占位）
 //   - 序列化请求体
 //   - 构造鉴权头
-//   - 从响应 JSON 中按 path 提取文本（gjson path）
+//   - 从响应 JSON 中提取文本（默认按 gjson path；需要时可自定义）
 //
 // 加新 provider 只需要在 providerAdapters 里增加一个条目，无需触碰 callProvider / validateProvider。
 type providerAdapter struct {
@@ -162,6 +162,7 @@ type providerAdapter struct {
 	buildBody    func(model, prompt string) ([]byte, error)
 	buildHeaders func(apiKey string) map[string]string
 	textPath     string // gjson 提取响应文本的 path
+	extractText  func([]byte) string
 }
 
 // providerAdapters 全部已支持的 provider。键值即 MonitorProvider* 字符串。
@@ -185,7 +186,7 @@ var providerAdapters = map[string]providerAdapter{
 				"anthropic-version": monitorAnthropicAPIVersion,
 			}
 		},
-		textPath: "content.0.text",
+		extractText: extractAnthropicText,
 	},
 	MonitorProviderGemini: {
 		// Gemini 把 model 名写在 URL path 上：/v1beta/models/{model}:generateContent
@@ -294,34 +295,37 @@ func callProvider(ctx context.Context, provider, endpoint, apiKey, model, prompt
 	if provider == MonitorProviderOpenAI && apiMode == MonitorAPIModeResponses {
 		return extractOpenAIResponsesText(respBytes), string(respBytes), status, nil
 	}
-	if provider == MonitorProviderAnthropic {
-		return extractAnthropicText(respBytes), string(respBytes), status, nil
-	}
-	return gjson.GetBytes(respBytes, adapter.textPath).String(), string(respBytes), status, nil
+	return extractMonitorResponseText(adapter, respBytes), string(respBytes), status, nil
 }
 
-// extractAnthropicText returns assistant text from either a Messages JSON response
-// or an Anthropic SSE stream. Claude thinking blocks can precede text blocks, so
-// content.0.text is not reliable. Some compatible upstreams also stream despite
-// stream:false, while still completing the request successfully.
+func extractMonitorResponseText(adapter providerAdapter, respBytes []byte) string {
+	if adapter.extractText != nil {
+		return adapter.extractText(respBytes)
+	}
+	return gjson.GetBytes(respBytes, adapter.textPath).String()
+}
+
+// extractAnthropicText supports both Messages JSON responses and SSE responses
+// returned by compatible upstreams despite stream:false.
 func extractAnthropicText(respBytes []byte) string {
-	var texts []string
 	content := gjson.GetBytes(respBytes, "content")
 	if content.IsArray() {
-		content.ForEach(func(_, block gjson.Result) bool {
-			if block.Get("type").String() != "text" {
+		parts := make([]string, 0, 1)
+		content.ForEach(func(_, item gjson.Result) bool {
+			if item.Get("type").String() != "text" {
 				return true
 			}
-			if text := block.Get("text").String(); text != "" {
-				texts = append(texts, text)
+			if text := item.Get("text").String(); text != "" {
+				parts = append(parts, text)
 			}
 			return true
 		})
-		if len(texts) > 0 {
-			return strings.Join(texts, "")
+		if len(parts) > 0 {
+			return strings.Join(parts, "")
 		}
 	}
 
+	var texts []string
 	scanner := bufio.NewScanner(bytes.NewReader(respBytes))
 	scanner.Buffer(make([]byte, 1024), monitorResponseMaxBytes)
 	for scanner.Scan() {
