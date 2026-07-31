@@ -305,24 +305,31 @@ func extractMonitorResponseText(adapter providerAdapter, respBytes []byte) strin
 	return gjson.GetBytes(respBytes, adapter.textPath).String()
 }
 
+func extractAnthropicMonitorText(respBytes []byte) string {
+	content := gjson.GetBytes(respBytes, "content")
+	if !content.IsArray() {
+		return ""
+	}
+
+	parts := make([]string, 0, 1)
+	content.ForEach(func(_, item gjson.Result) bool {
+		if item.Get("type").String() != "text" {
+			return true
+		}
+		text := strings.TrimSpace(item.Get("text").String())
+		if text != "" {
+			parts = append(parts, text)
+		}
+		return true
+	})
+	return strings.Join(parts, "\n")
+}
+
 // extractAnthropicText supports both Messages JSON responses and SSE responses
 // returned by compatible upstreams despite stream:false.
 func extractAnthropicText(respBytes []byte) string {
-	content := gjson.GetBytes(respBytes, "content")
-	if content.IsArray() {
-		parts := make([]string, 0, 1)
-		content.ForEach(func(_, item gjson.Result) bool {
-			if item.Get("type").String() != "text" {
-				return true
-			}
-			if text := item.Get("text").String(); text != "" {
-				parts = append(parts, text)
-			}
-			return true
-		})
-		if len(parts) > 0 {
-			return strings.Join(parts, "")
-		}
+	if text := extractAnthropicMonitorText(respBytes); text != "" {
+		return text
 	}
 
 	var texts []string
