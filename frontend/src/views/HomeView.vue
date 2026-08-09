@@ -1,5 +1,5 @@
 <template>
-  <div v-if="homeContent" class="min-h-screen">
+  <div v-if="hasHomeContent" class="min-h-screen">
     <iframe
       v-if="isHomeContentUrl"
       :src="homeContent.trim()"
@@ -7,6 +7,34 @@
       allowfullscreen
     ></iframe>
     <div v-else v-html="homeContent"></div>
+  </div>
+
+  <div
+    v-else-if="compactHomeEnabled"
+    data-testid="compact-home"
+    class="flex min-h-screen flex-col bg-gray-50 text-gray-900 dark:bg-dark-950 dark:text-white"
+  >
+    <header class="border-b border-gray-200 px-4 py-4 dark:border-dark-800">
+      <nav class="mx-auto flex max-w-5xl items-center justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-3">
+          <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-9 w-9 shrink-0 rounded-lg object-contain" />
+          <span class="truncate text-base font-semibold">{{ siteName }}</span>
+        </div>
+        <router-link
+          :to="isAuthenticated ? dashboardPath : '/login'"
+          class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-gray-900"
+        >
+          {{ isAuthenticated ? copy.console : copy.login }}
+        </router-link>
+      </nav>
+    </header>
+    <main class="flex flex-1 items-center justify-center px-4 py-16 text-center">
+      <div class="max-w-2xl">
+        <img :src="siteLogo || '/logo.png'" alt="Logo" class="mx-auto mb-6 h-20 w-20 rounded-2xl object-contain" />
+        <h1 class="text-3xl font-bold">{{ siteName }}</h1>
+        <p class="mt-4 text-base text-gray-600 dark:text-dark-300">{{ siteSubtitle }}</p>
+      </div>
+    </main>
   </div>
 
   <div v-else class="tl-home" :class="{ 'tl-home-dark': isDark }">
@@ -82,7 +110,7 @@
         </section>
 
         <section class="tl-right" aria-label="Gateway workflow">
-          <div class="tl-panel tl-command">
+          <div class="terminal-container tl-panel tl-command">
             <div class="tl-command-head">
               <div>
                 <b>{{ copy.workflow }}</b>
@@ -184,7 +212,8 @@ import { sanitizeUrl } from '@/utils/url'
 
 type LocaleCode = 'zh' | 'en'
 
-const { locale } = useI18n()
+const i18n = useI18n()
+const locale = i18n.locale ?? ref('zh')
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
@@ -193,8 +222,11 @@ const siteName = computed(() => {
   return configured && !['Sub2API', 'QuotaAPI'].includes(configured) ? configured : 'Token Life'
 })
 const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
+const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || '')
 const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || '/docs/index.html', { allowRelative: true }) || '/docs/index.html')
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
+const hasHomeContent = computed(() => homeContent.value.trim().length > 0)
+const compactHomeEnabled = computed(() => appStore.cachedPublicSettings?.compact_home_enabled === true)
 const isHomeContentUrl = computed(() => {
   const content = homeContent.value.trim()
   return content.startsWith('http://') || content.startsWith('https://')
