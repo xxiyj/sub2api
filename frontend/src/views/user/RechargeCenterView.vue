@@ -168,7 +168,7 @@
                   <button
                     type="button"
                     class="activity-page-button"
-                    :disabled="historyPage === 1"
+                    :disabled="loadingHistory || submitting || historyPage === 1"
                     aria-label="Previous page"
                     @click="changeHistoryPage(historyPage - 1)"
                   >
@@ -178,7 +178,7 @@
                   <button
                     type="button"
                     class="activity-page-button"
-                    :disabled="historyPage === historyTotalPages"
+                    :disabled="loadingHistory || submitting || historyPage === historyTotalPages"
                     aria-label="Next page"
                     @click="changeHistoryPage(historyPage + 1)"
                   >
@@ -281,16 +281,15 @@ const loadingHistory = ref(false)
 const contactInfo = ref('')
 const historyPageSize = 5
 const historyPage = ref(1)
+const historyTotal = ref(0)
 
-const historyTotalPages = computed(() => Math.max(1, Math.ceil(history.value.length / historyPageSize)))
-const showHistoryPagination = computed(() => history.value.length > historyPageSize)
-const paginatedHistory = computed(() => {
-  const start = (historyPage.value - 1) * historyPageSize
-  return history.value.slice(start, start + historyPageSize)
-})
+const historyTotalPages = computed(() => Math.max(1, Math.ceil(historyTotal.value / historyPageSize)))
+const showHistoryPagination = computed(() => historyTotal.value > historyPageSize)
+const paginatedHistory = computed(() => history.value)
 
 const changeHistoryPage = (page: number) => {
-  historyPage.value = Math.min(Math.max(page, 1), historyTotalPages.value)
+  if (loadingHistory.value || submitting.value) return
+  return fetchHistory(Math.min(Math.max(page, 1), historyTotalPages.value))
 }
 
 const isBalanceType = (type: string) => type === 'balance' || type === 'admin_balance'
@@ -336,13 +335,16 @@ const getHistoryValueClass = (item: RedeemHistoryItem) => {
   return item.value >= 0 ? 'value-blue' : 'value-orange'
 }
 
-const fetchHistory = async () => {
+const fetchHistory = async (page = 1) => {
   loadingHistory.value = true
   try {
-    history.value = await redeemAPI.getHistory()
-    changeHistoryPage(1)
+    const result = await redeemAPI.getHistory(page, historyPageSize)
+    history.value = result.items
+    historyTotal.value = result.total
+    historyPage.value = page
   } catch (error) {
     console.error('Failed to fetch history:', error)
+    appStore.showError(t('redeem.historyLoadFailed'))
   } finally {
     loadingHistory.value = false
   }
